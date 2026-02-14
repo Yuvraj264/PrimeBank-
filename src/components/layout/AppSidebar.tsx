@@ -29,6 +29,7 @@ const getNavItems = (role: UserRole): NavItem[] => {
         { label: 'Transactions', path: '/customer/transactions', icon: Receipt },
         { label: 'Beneficiaries', path: '/customer/beneficiaries', icon: Users },
         { label: 'Statements', path: '/customer/statements', icon: FileText },
+        { label: 'My Profile', path: '/customer/profile', icon: UserCheck },
         { label: 'Security', path: '/customer/security', icon: Shield },
       ];
     case 'employee':

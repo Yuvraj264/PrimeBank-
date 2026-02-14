@@ -1,25 +1,58 @@
-import { useAppSelector } from '@/store';
-import { mockAccounts, mockTransactions, spendingByCategory, monthlyTransactionData } from '@/data/mockData';
+import { useState, useEffect } from 'react';
+import { useAppSelector, useAppDispatch } from '@/store';
+import { setUser } from '@/store/authSlice';
+import api from '@/lib/api';
+import { accountService } from '@/services/accountService';
+import { transactionService } from '@/services/transactionService';
+import { Account, Transaction } from '@/types';
+import { spendingByCategory, monthlyTransactionData } from '@/data/mockData';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import GlassCard from '@/components/shared/GlassCard';
 import AnimatedCounter from '@/components/shared/AnimatedCounter';
 import StatusBadge from '@/components/shared/StatusBadge';
+import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import {
   ArrowUpRight, ArrowDownRight, CreditCard, ArrowLeftRight,
-  FileText, TrendingUp, Wallet, ShieldCheck
+  FileText, TrendingUp, Wallet, ShieldCheck, User
 } from 'lucide-react';
 
 export default function CustomerDashboard() {
   const { user } = useAppSelector((s) => s.auth);
+  const dispatch = useAppDispatch();
   const navigate = useNavigate();
-  const accounts = mockAccounts.filter((a) => a.userId === user?.id);
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // Refresh user profile to ensure status is up to date
+        const userRes = await api.get('/auth/me');
+        if (userRes.data?.data) {
+          dispatch(setUser(userRes.data.data));
+        }
+
+        const [accData, txnData] = await Promise.all([
+          accountService.getMyAccounts(),
+          transactionService.getMyTransactions()
+        ]);
+        setAccounts(accData);
+        setTransactions(txnData);
+      } catch (error) {
+        console.error("Failed to fetch data", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (user) fetchData();
+  }, [user?.id]); // Only re-run if user ID changes, not on every user object change to avoid loops
+
   const totalBalance = accounts.reduce((s, a) => s + a.balance, 0);
-  const recentTxns = mockTransactions.filter(
-    (t) => t.fromAccountId === accounts[0]?.id || t.toAccountId === accounts[0]?.id
-  ).slice(0, 5);
+  const recentTxns = transactions.slice(0, 5);
 
   const quickActions = [
     { label: 'Transfer', icon: ArrowLeftRight, path: '/customer/transfers', color: 'text-primary' },
@@ -41,6 +74,24 @@ export default function CustomerDashboard() {
           </h1>
           <p className="text-muted-foreground text-sm mt-1">Here's your financial overview</p>
         </div>
+
+        {/* Onboarding Prompts */}
+        {!user?.profileCompleted && (
+          <GlassCard className="bg-primary/10 border-primary/20">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary animate-pulse">
+                  <User className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-primary">Complete Your Profile</h3>
+                  <p className="text-sm text-foreground/80">Finish setting up your account to unlock all features.</p>
+                </div>
+              </div>
+              <Button onClick={() => navigate('/customer/onboarding')}>Complete Now</Button>
+            </div>
+          </GlassCard>
+        )}
 
         {/* Balance + Health Score */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

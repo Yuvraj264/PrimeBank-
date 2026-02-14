@@ -2,10 +2,22 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppDispatch } from '@/store';
-import { loginSuccess, simulateLogin } from '@/store/authSlice';
+import { setUser } from '@/store/authSlice';
 import { Fingerprint, CheckCircle2, XCircle, RotateCcw, ArrowLeft } from 'lucide-react';
 
 type ScanState = 'idle' | 'scanning' | 'success' | 'failure';
+
+const simulateLogin = (role: string) => {
+  return {
+    id: 'user_123',
+    name: 'John Doe',
+    email: 'john@example.com',
+    role: role,
+    status: 'active',
+    twoFactorEnabled: false,
+    profileCompleted: true
+  };
+};
 
 export default function BiometricLogin() {
   const [state, setState] = useState<ScanState>('idle');
@@ -27,13 +39,13 @@ export default function BiometricLogin() {
           const success = Math.random() > 0.3;
           if (success) {
             setState('success');
-            const result = simulateLogin('customer');
-            if (result) {
-              setTimeout(() => {
-                dispatch(loginSuccess(result));
-                navigate('/customer');
-              }, 1500);
-            }
+            const user = simulateLogin('customer');
+            setTimeout(() => {
+              // Set a mock token for the demo
+              localStorage.setItem('token', 'mock_biometric_token');
+              dispatch(setUser(user as any));
+              navigate('/customer');
+            }, 1500);
           } else {
             setState('failure');
           }

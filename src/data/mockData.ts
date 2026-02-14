@@ -11,6 +11,34 @@ export const mockUsers: User[] = [
     createdAt: '2024-01-15T08:00:00Z',
     lastLogin: '2026-02-11T09:30:00Z',
     twoFactorEnabled: true,
+    profileCompleted: true,
+    personalDetails: {
+      dob: '1985-06-15',
+      gender: 'female',
+      maritalStatus: 'married',
+      fatherName: 'Robert Chen'
+    },
+    identityDetails: {
+      panNumber: 'ABCDE1234F',
+      aadhaarNumber: '123456789012'
+    },
+    address: {
+      street: '456 Tech Park',
+      city: 'San Francisco',
+      state: 'CA',
+      zip: '94105',
+      country: 'USA'
+    },
+    professionalDetails: {
+      occupation: 'Bank Manager',
+      incomeSource: 'Salary',
+      annualIncome: 120000
+    },
+    nominee: {
+      name: 'Michael Chen',
+      relation: 'Spouse',
+      dob: '1982-04-10'
+    }
   },
   {
     id: 'emp-001',
@@ -22,6 +50,7 @@ export const mockUsers: User[] = [
     createdAt: '2024-03-20T08:00:00Z',
     lastLogin: '2026-02-11T08:45:00Z',
     twoFactorEnabled: true,
+    profileCompleted: true,
   },
   {
     id: 'cust-001',
@@ -33,6 +62,7 @@ export const mockUsers: User[] = [
     createdAt: '2024-06-10T08:00:00Z',
     lastLogin: '2026-02-11T10:15:00Z',
     twoFactorEnabled: false,
+    profileCompleted: false,
   },
   {
     id: 'cust-002',
@@ -44,6 +74,34 @@ export const mockUsers: User[] = [
     createdAt: '2024-08-15T08:00:00Z',
     lastLogin: '2026-02-10T14:20:00Z',
     twoFactorEnabled: true,
+    profileCompleted: true,
+    personalDetails: {
+      dob: '1992-08-20',
+      gender: 'female',
+      maritalStatus: 'single',
+      fatherName: 'Raj Sharma'
+    },
+    identityDetails: {
+      panNumber: 'FGHIJ5678K',
+      aadhaarNumber: '987654321098'
+    },
+    address: {
+      street: '789 Park Ave',
+      city: 'New York',
+      state: 'NY',
+      zip: '10021',
+      country: 'USA'
+    },
+    professionalDetails: {
+      occupation: 'Designer',
+      incomeSource: 'Freelance',
+      annualIncome: 85000
+    },
+    nominee: {
+      name: 'Raj Sharma',
+      relation: 'Father',
+      dob: '1960-01-01'
+    }
   },
   {
     id: 'cust-003',
@@ -55,6 +113,7 @@ export const mockUsers: User[] = [
     createdAt: '2024-09-01T08:00:00Z',
     lastLogin: '2026-01-28T11:00:00Z',
     twoFactorEnabled: false,
+    profileCompleted: true,
   },
 ];
 

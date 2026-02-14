@@ -1,11 +1,38 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { AuthState, User, UserRole } from '@/types';
-import { mockUsers } from '@/data/mockData';
+import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
+import { AuthState, User, AuthResponse } from '@/types';
+import api from '@/lib/api';
+
+// Async Thunks
+export const login = createAsyncThunk(
+  'auth/login',
+  async (credentials: any, { rejectWithValue }) => {
+    try {
+      const response = await api.post<AuthResponse>('/auth/login', credentials);
+      localStorage.setItem('token', response.data.token);
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Login failed');
+    }
+  }
+);
+
+export const register = createAsyncThunk(
+  'auth/register',
+  async (userData: any, { rejectWithValue }) => {
+    try {
+      const response = await api.post<AuthResponse>('/auth/register', userData);
+      localStorage.setItem('token', response.data.token);
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Registration failed');
+    }
+  }
+);
 
 const initialState: AuthState = {
   user: null,
-  token: null,
-  isAuthenticated: false,
+  token: localStorage.getItem('token'),
+  isAuthenticated: !!localStorage.getItem('token'),
   loading: false,
   error: null,
 };
@@ -14,41 +41,60 @@ const authSlice = createSlice({
   name: 'auth',
   initialState,
   reducers: {
-    loginStart(state) {
-      state.loading = true;
-      state.error = null;
-    },
-    loginSuccess(state, action: PayloadAction<{ user: User; token: string }>) {
-      state.user = action.payload.user;
-      state.token = action.payload.token;
-      state.isAuthenticated = true;
-      state.loading = false;
-      state.error = null;
-    },
-    loginFailure(state, action: PayloadAction<string>) {
-      state.loading = false;
-      state.error = action.payload;
-    },
     logout(state) {
       state.user = null;
       state.token = null;
       state.isAuthenticated = false;
       state.loading = false;
       state.error = null;
+      localStorage.removeItem('token');
     },
     clearError(state) {
       state.error = null;
     },
+    setUser(state, action: PayloadAction<User>) {
+      state.user = action.payload;
+      state.isAuthenticated = true;
+    },
+    loginFailure(state, action: PayloadAction<string>) {
+      state.loading = false;
+      state.error = action.payload;
+    }
+  },
+  extraReducers: (builder) => {
+    builder
+      // Login
+      .addCase(login.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(login.fulfilled, (state, action) => {
+        state.loading = false;
+        state.isAuthenticated = true;
+        state.user = action.payload.data;
+        state.token = action.payload.token;
+      })
+      .addCase(login.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+      // Register
+      .addCase(register.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(register.fulfilled, (state, action) => {
+        state.loading = false;
+        state.isAuthenticated = true;
+        state.user = action.payload.data;
+        state.token = action.payload.token;
+      })
+      .addCase(register.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      });
   },
 });
 
-export const { loginStart, loginSuccess, loginFailure, logout, clearError } = authSlice.actions;
-
-export const simulateLogin = (role: UserRole) => {
-  const user = mockUsers.find((u) => u.role === role);
-  if (!user) return null;
-  const token = `mock-jwt-${role}-${Date.now()}`;
-  return { user, token };
-};
-
+export const { logout, clearError, setUser, loginFailure } = authSlice.actions;
 export default authSlice.reducer;

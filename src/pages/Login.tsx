@@ -1,8 +1,9 @@
 import { useState } from 'react';
+import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAppDispatch, useAppSelector } from '@/store';
-import { loginStart, loginSuccess, loginFailure, simulateLogin } from '@/store/authSlice';
+import { login, loginFailure } from '@/store/authSlice';
 import { UserRole } from '@/types';
 import { Landmark, Shield, Users, UserCheck, Fingerprint, ArrowRight, Lock, Mail } from 'lucide-react';
 
@@ -20,19 +21,22 @@ export default function Login() {
   const navigate = useNavigate();
   const { loading, error } = useAppSelector((s) => s.auth);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    dispatch(loginStart());
+    if (!email || !password) {
+      dispatch(loginFailure('Please enter both email and password'));
+      return;
+    }
 
-    setTimeout(() => {
-      const result = simulateLogin(selectedRole);
-      if (result) {
-        dispatch(loginSuccess(result));
-        navigate(`/${selectedRole}`);
-      } else {
-        dispatch(loginFailure('Invalid credentials'));
-      }
-    }, 800);
+    try {
+      const result = await dispatch(login({ email, password })).unwrap();
+      navigate(`/${result.data.role}`);
+      toast.success('Login successful!');
+    } catch (err: any) {
+      console.error('Login error:', err);
+      const errorMessage = typeof err === 'string' ? err : (err?.message || 'Login failed. Please check your credentials.');
+      toast.error(errorMessage);
+    }
   };
 
   return (
@@ -67,11 +71,10 @@ export default function Login() {
                 <button
                   key={r.role}
                   onClick={() => setSelectedRole(r.role)}
-                  className={`flex flex-col items-center gap-1.5 p-3 rounded-lg border text-center transition-all duration-200 ${
-                    selectedRole === r.role
-                      ? 'border-primary/40 bg-primary/10 text-primary'
-                      : 'border-border/30 hover:border-border/50 text-muted-foreground hover:text-foreground'
-                  }`}
+                  className={`flex flex-col items-center gap-1.5 p-3 rounded-lg border text-center transition-all duration-200 ${selectedRole === r.role
+                    ? 'border-primary/40 bg-primary/10 text-primary'
+                    : 'border-border/30 hover:border-border/50 text-muted-foreground hover:text-foreground'
+                    }`}
                 >
                   <r.icon className="w-5 h-5" />
                   <span className="text-xs font-medium">{r.label}</span>
@@ -135,6 +138,17 @@ export default function Login() {
                 </>
               )}
             </button>
+
+            <div className="text-center text-sm">
+              <span className="text-muted-foreground">Don't have an account? </span>
+              <button
+                type="button"
+                onClick={() => navigate('/register')}
+                className="text-primary hover:underline font-medium"
+              >
+                Sign Up
+              </button>
+            </div>
           </form>
 
           {/* Biometric */}
@@ -157,7 +171,7 @@ export default function Login() {
         </div>
 
         <p className="text-center text-xs text-muted-foreground mt-6">
-          Demo mode — select a role and click Sign In
+          Enter your credentials to sign in
         </p>
       </motion.div>
     </div>

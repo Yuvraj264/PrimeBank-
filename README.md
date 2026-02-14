@@ -34,6 +34,9 @@ npm i
 
 # Step 4: Start the development server with auto-reloading and an instant preview.
 npm run dev
+
+# Or to run both frontend and backend concurrently:
+npm run dev:all
 ```
 
 **Edit a file directly in GitHub**

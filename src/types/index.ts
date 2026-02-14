@@ -1,16 +1,62 @@
 export type UserRole = 'admin' | 'employee' | 'customer';
 
+export interface Address {
+  street: string;
+  city: string;
+  state: string;
+  zip: string;
+  country: string;
+}
+
+export interface PersonalDetails {
+  fullName: string;
+  dob: string;
+  gender: 'male' | 'female' | 'other' | '';
+  maritalStatus: 'single' | 'married' | 'divorced' | 'widowed' | '';
+  fatherName: string;
+}
+
+export interface ProfessionalDetails {
+  occupation: string;
+  incomeSource: string;
+  annualIncome: number;
+}
+
+export interface IdentityDetails {
+  panNumber: string;
+  aadhaarNumber: string;
+}
+
+export interface Nominee {
+  name: string;
+  relation: string;
+  dob: string;
+}
+
 export interface User {
   id: string;
   name: string;
   email: string;
   role: UserRole;
+  phone?: string;
+  status: 'active' | 'pending' | 'blocked';
+  lastLogin?: string;
+  identityDetails?: IdentityDetails;
+  // Legacy/Frontend-only fields (making optional to avoid breaking mockData)
   avatar?: string;
-  phone: string;
-  status: 'active' | 'blocked' | 'pending';
-  createdAt: string;
-  lastLogin: string;
-  twoFactorEnabled: boolean;
+  createdAt?: string;
+  twoFactorEnabled?: boolean;
+  profileCompleted?: boolean;
+  personalDetails?: PersonalDetails;
+  address?: Address;
+  professionalDetails?: ProfessionalDetails;
+  nominee?: Nominee;
+}
+
+export interface AuthResponse {
+  status: string;
+  token: string;
+  data: User;
 }
 
 export interface Account {
