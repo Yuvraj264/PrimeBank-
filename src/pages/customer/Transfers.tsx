@@ -10,7 +10,7 @@ import { useAppSelector } from '@/store';
 import { accountService } from '@/services/accountService';
 import { transactionService } from '@/services/transactionService';
 import { toast } from 'sonner';
-import { ArrowRight, Wallet, User as UserIcon, Globe, Building2 } from 'lucide-react';
+import { ArrowRight, Wallet, User as UserIcon, Globe, Building2, ArrowDownCircle } from 'lucide-react';
 
 export default function Transfers() {
   const { user } = useAppSelector((s) => s.auth);
@@ -57,6 +57,27 @@ export default function Transfers() {
     }
   };
 
+  const handleDeposit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
+      toast.error('Please enter a valid amount');
+      return;
+    }
+
+    try {
+      await transactionService.deposit({
+        amount: Number(amount)
+      });
+      toast.success('Deposit successful');
+      setAmount('');
+      // Refresh accounts to show new balance
+      const data = await accountService.getMyAccounts();
+      setAccounts(data);
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Deposit failed');
+    }
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -68,7 +89,7 @@ export default function Transfers() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <GlassCard className="lg:col-span-2">
             <Tabs defaultValue="internal" className="w-full">
-              <TabsList className="grid w-full grid-cols-3 mb-6 bg-secondary/30">
+              <TabsList className="grid w-full grid-cols-4 mb-6 bg-secondary/30">
                 <TabsTrigger value="internal" className="flex items-center gap-2">
                   <Wallet className="w-4 h-4" /> Own Accounts
                 </TabsTrigger>
@@ -77,6 +98,9 @@ export default function Transfers() {
                 </TabsTrigger>
                 <TabsTrigger value="international" className="flex items-center gap-2">
                   <Globe className="w-4 h-4" /> International
+                </TabsTrigger>
+                <TabsTrigger value="deposit" className="flex items-center gap-2">
+                  <ArrowDownCircle className="w-4 h-4" /> Deposit
                 </TabsTrigger>
               </TabsList>
 
@@ -140,7 +164,7 @@ export default function Transfers() {
                 <form onSubmit={handleTransfer} className="space-y-4">
                   <div className="space-y-2">
                     <Label>From Account</Label>
-                    <Select defaultValue={accounts[0]?.id}>
+                    <Select value={fromAccount} onValueChange={setFromAccount}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select account" />
                       </SelectTrigger>
@@ -184,6 +208,28 @@ export default function Transfers() {
                   <Globe className="w-12 h-12 mx-auto mb-3 opacity-20" />
                   <p>International transfers are currently disabled for your region.</p>
                 </div>
+              </TabsContent>
+
+              <TabsContent value="deposit">
+                <form onSubmit={handleDeposit} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Amount to Deposit</Label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                      <Input
+                        type="number"
+                        placeholder="0.00"
+                        className="pl-8"
+                        value={amount}
+                        onChange={(e) => setAmount(e.target.value)}
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground">Funds will be deposited to your primary account.</p>
+                  </div>
+                  <Button type="submit" className="w-full">
+                    Deposit Funds <ArrowDownCircle className="w-4 h-4 ml-2" />
+                  </Button>
+                </form>
               </TabsContent>
             </Tabs>
           </GlassCard>

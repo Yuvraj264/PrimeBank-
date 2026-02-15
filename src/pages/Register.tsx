@@ -38,16 +38,9 @@ export default function Register() {
                 role: 'customer'
             });
 
-            // Automatically login after registration
-            dispatch(login({ email, password })).unwrap()
-                .then((result) => {
-                    navigate('/customer/onboarding'); // Redirect to profile setup/onboarding
-                    toast.success('Registration successful! Welcome to iBank.');
-                })
-                .catch(() => {
-                    navigate('/login');
-                    toast.success('Registration successful! Please login.');
-                });
+            // Redirect to login page instead of auto-login
+            toast.success('Registration successful! Please login with your credentials.');
+            navigate('/login');
 
         } catch (err: any) {
             console.error('Registration error:', err);

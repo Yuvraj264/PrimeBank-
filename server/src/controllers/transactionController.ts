@@ -44,9 +44,22 @@ export const transferFound = catchAsync(async (req: AuthRequest, res: Response, 
             throw new AppError('Cannot transfer to self', 400);
         }
 
+        // Check and reset daily limit
+        const today = new Date();
+        const lastReset = new Date(senderAccount.lastLimitResetDate || 0);
+
+        if (today.toDateString() !== lastReset.toDateString()) {
+            senderAccount.usedLimit = 0;
+            senderAccount.lastLimitResetDate = today;
+        }
+
+        if (senderAccount.usedLimit + Number(amount) > senderAccount.dailyLimit) {
+            throw new AppError(`Daily transaction limit exceeded. Remaining limit: ${senderAccount.dailyLimit - senderAccount.usedLimit}`, 400);
+        }
+
         // Deduct from sender
         senderAccount.balance -= amount;
-        senderAccount.usedLimit += amount; // Simplified limit logic
+        senderAccount.usedLimit += Number(amount);
         await senderAccount.save();
 
         // Add to receiver
@@ -169,7 +182,21 @@ export const payBill = catchAsync(async (req: AuthRequest, res: Response, next: 
             throw new AppError('Insufficient funds', 400);
         }
 
+        // Check and reset daily limit
+        const today = new Date();
+        const lastReset = new Date(account.lastLimitResetDate || 0);
+
+        if (today.toDateString() !== lastReset.toDateString()) {
+            account.usedLimit = 0;
+            account.lastLimitResetDate = today;
+        }
+
+        if (account.usedLimit + Number(amount) > account.dailyLimit) {
+            throw new AppError(`Daily transaction limit exceeded. Remaining limit: ${account.dailyLimit - account.usedLimit}`, 400);
+        }
+
         account.balance -= Number(amount);
+        account.usedLimit += Number(amount);
         await account.save();
 
         const transaction = await Transaction.create({

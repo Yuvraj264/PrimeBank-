@@ -9,6 +9,7 @@ export interface IAccount extends Document {
     status: 'active' | 'frozen' | 'closed';
     dailyLimit: number;
     usedLimit: number;
+    lastLimitResetDate: Date;
 }
 
 const AccountSchema: Schema = new Schema({
@@ -20,6 +21,7 @@ const AccountSchema: Schema = new Schema({
     status: { type: String, enum: ['active', 'frozen', 'closed'], default: 'active' },
     dailyLimit: { type: Number, default: 50000 },
     usedLimit: { type: Number, default: 0 },
+    lastLimitResetDate: { type: Date, default: Date.now }
 }, {
     timestamps: true,
     toJSON: {
