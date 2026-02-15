@@ -5,7 +5,7 @@ import api from '@/lib/api';
 import { accountService } from '@/services/accountService';
 import { transactionService } from '@/services/transactionService';
 import { Account, Transaction } from '@/types';
-import { spendingByCategory, monthlyTransactionData } from '@/data/mockData';
+import { monthlyTransactionData } from '@/data/mockData';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import GlassCard from '@/components/shared/GlassCard';
 import AnimatedCounter from '@/components/shared/AnimatedCounter';
@@ -16,7 +16,7 @@ import { motion } from 'framer-motion';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import {
   ArrowUpRight, ArrowDownRight, CreditCard, ArrowLeftRight,
-  FileText, TrendingUp, Wallet, ShieldCheck, User
+  FileText, ShieldCheck, User
 } from 'lucide-react';
 
 export default function CustomerDashboard() {
@@ -58,7 +58,7 @@ export default function CustomerDashboard() {
     { label: 'Transfer', icon: ArrowLeftRight, path: '/customer/transfers', color: 'text-primary' },
     { label: 'Pay Bills', icon: CreditCard, path: '/customer/bills', color: 'text-success' },
     { label: 'Statements', icon: FileText, path: '/customer/statements', color: 'text-warning' },
-    { label: 'Security', icon: ShieldCheck, path: '/customer/security', color: 'text-destructive' },
+    { label: 'My Cards', icon: User, path: '/customer/cards', color: 'text-info' },
   ];
 
   // Financial health score (simulated)

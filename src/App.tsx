@@ -20,6 +20,7 @@ import Statements from './pages/customer/Statements';
 import Security from './pages/customer/Security';
 import ProfileSetup from './pages/customer/ProfileSetup';
 import CustomerProfile from './pages/customer/CustomerProfile';
+import CardsAndAccounts from './pages/customer/CardsAndAccounts';
 import KYCSubmission from './pages/customer/KYCSubmission';
 import Customers from './pages/employee/Customers';
 import KYCVerification from './pages/employee/KYCVerification';
@@ -98,6 +99,11 @@ const App = () => (
             <Route path="/customer/profile" element={
               <ProtectedRoute allowedRoles={['customer']}>
                 <CustomerProfile />
+              </ProtectedRoute>
+            } />
+            <Route path="/customer/cards" element={
+              <ProtectedRoute allowedRoles={['customer']}>
+                <CardsAndAccounts />
               </ProtectedRoute>
             } />
 

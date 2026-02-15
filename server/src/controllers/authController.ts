@@ -32,11 +32,38 @@ export const register = catchAsync(async (req: Request, res: Response, next: Nex
     if (user) {
         // Create a default account for customers
         if (user.role === 'customer') {
-            await Account.create({
+            const newAccount = await Account.create({
                 userId: user._id as any,
                 accountNumber: Math.floor(1000000000 + Math.random() * 9000000000).toString(),
                 type: 'savings',
                 balance: 0
+            });
+
+            // Generate a Virtual Card for the new account
+            // Generate valid future expiry date
+            const today = new Date();
+            const year = today.getFullYear() + 5;
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const expiryDate = `${month}/${year.toString().slice(-2)}`;
+
+            // Generate random 16 digit card number 
+            // valid format: 4xxx xxxx xxxx xxxx (Visa)
+            const cardNumber = '4' + Array(15).fill(0).map(() => Math.floor(Math.random() * 10)).join('');
+
+            // Generate CVV
+            const cvv = String(Math.floor(100 + Math.random() * 900));
+
+            await import('../models/Card').then(({ default: Card }) => {
+                Card.create({
+                    userId: user._id as any,
+                    accountId: newAccount._id as any,
+                    cardNumber,
+                    cardHolder: user.name.toUpperCase(),
+                    expiryDate,
+                    cvv,
+                    type: 'visa',
+                    status: 'active'
+                });
             });
         }
 
@@ -121,8 +148,37 @@ export const updateProfile = catchAsync(async (req: Request, res: Response, next
         { new: true, runValidators: true }
     );
 
+    // If name was updated, sync it with the virtual card
+    if (updates.name && user) {
+        await import('../models/Card').then(({ default: Card }) => {
+            Card.findOneAndUpdate(
+                { userId: user._id, status: 'active' } as any,
+                { cardHolder: updates.name.toUpperCase() }
+            ).exec();
+        });
+    }
+
     res.status(200).json({
         status: 'success',
         data: user
+    });
+});
+
+export const verifyPassword = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
+    const { password } = req.body;
+
+    if (!password) {
+        return next(new AppError('Please provide password', 400));
+    }
+
+    const user = await User.findById((req as any).user.id).select('+password');
+
+    if (!user || !(await user.matchPassword(password))) {
+        return next(new AppError('Incorrect password', 401));
+    }
+
+    res.status(200).json({
+        status: 'success',
+        message: 'Password verified'
     });
 });

@@ -27,6 +27,7 @@ const getNavItems = (role: UserRole): NavItem[] => {
         { label: 'Transfers', path: '/customer/transfers', icon: ArrowLeftRight },
         { label: 'Bill Payments', path: '/customer/bills', icon: CreditCard },
         { label: 'Transactions', path: '/customer/transactions', icon: Receipt },
+        { label: 'My Cards', path: '/customer/cards', icon: CreditCard },
         { label: 'Beneficiaries', path: '/customer/beneficiaries', icon: Users },
         { label: 'Statements', path: '/customer/statements', icon: FileText },
         { label: 'My Profile', path: '/customer/profile', icon: UserCheck },

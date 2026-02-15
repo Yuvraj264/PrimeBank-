@@ -29,6 +29,18 @@ export const register = createAsyncThunk(
   }
 );
 
+export const verifyPassword = createAsyncThunk(
+  'auth/verifyPassword',
+  async (password: string, { rejectWithValue }) => {
+    try {
+      const response = await api.post<{ status: string; message: string }>('/auth/verify-password', { password });
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Password verification failed');
+    }
+  }
+);
+
 const initialState: AuthState = {
   user: null,
   token: localStorage.getItem('token'),
