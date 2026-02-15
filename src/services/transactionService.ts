@@ -1,5 +1,6 @@
 import api from '@/lib/api';
 import { Transaction } from '@/types';
+export type { Transaction };
 
 export const transactionService = {
     getMyTransactions: async () => {

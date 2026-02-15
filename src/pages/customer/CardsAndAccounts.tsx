@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAppSelector } from '@/store';
 import api from '@/lib/api';
 import { accountService } from '@/services/accountService';
@@ -13,6 +14,7 @@ import { Plus, Wallet, ArrowUpRight, CreditCard, ShieldCheck, Lock } from 'lucid
 import { toast } from 'sonner';
 
 export default function CardsAndAccounts() {
+    const navigate = useNavigate();
     const { user } = useAppSelector((s) => s.auth);
     const [accounts, setAccounts] = useState<Account[]>([]);
     const [cards, setCards] = useState<CardType[]>([]);
@@ -177,7 +179,12 @@ export default function CardsAndAccounts() {
                                         <div className="text-xs text-muted-foreground">
                                             Limit: ${acc.usedLimit.toLocaleString()} / ${acc.dailyLimit.toLocaleString()} used
                                         </div>
-                                        <Button variant="ghost" size="sm" className="h-8 gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-8 gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                            onClick={() => navigate(`/customer/transactions?accountId=${acc.id}`)}
+                                        >
                                             View Details <ArrowUpRight className="w-3 h-3" />
                                         </Button>
                                     </div>

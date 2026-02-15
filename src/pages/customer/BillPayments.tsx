@@ -1,15 +1,17 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import GlassCard from '@/components/shared/GlassCard';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Zap, Wifi, Smartphone, Droplets, CreditCard, Tv, Car, Home } from 'lucide-react';
+import { Zap, Wifi, Smartphone, Droplets, CreditCard, Tv, Car, Home, History } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAppSelector } from '@/store';
 import { accountService } from '@/services/accountService';
-import { transactionService } from '@/services/transactionService';
+import { transactionService, Transaction } from '@/services/transactionService';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { format } from 'date-fns';
 
 const billers = [
     { id: 1, name: 'Electricity', icon: Zap, color: 'text-yellow-400', bg: 'bg-yellow-400/10' },
@@ -23,29 +25,44 @@ const billers = [
 ];
 
 export default function BillPayments() {
+    const navigate = useNavigate();
     const [selectedBiller, setSelectedBiller] = useState<number | null>(null);
     const [amount, setAmount] = useState('');
     const [consumerNumber, setConsumerNumber] = useState('');
     const [accounts, setAccounts] = useState<any[]>([]);
     const [selectedAccount, setSelectedAccount] = useState('');
+    const [recentPayments, setRecentPayments] = useState<Transaction[]>([]);
+    const [loading, setLoading] = useState(false);
     const { user } = useAppSelector((s) => s.auth);
 
+    const fetchData = async () => {
+        try {
+            const [accData, txData] = await Promise.all([
+                accountService.getMyAccounts(),
+                transactionService.getMyTransactions()
+            ]);
+            setAccounts(accData);
+            if (accData.length > 0 && !selectedAccount) setSelectedAccount(accData[0].id);
+
+            // Filter for bill payments
+            const bills = txData.filter((t: Transaction) =>
+                t.type === 'bill_payment' || t.category === 'bills'
+            ).slice(0, 5);
+            setRecentPayments(bills);
+        } catch (error) {
+            console.error("Failed to fetch data", error);
+            toast.error('Failed to load banking data');
+        }
+    };
+
     useEffect(() => {
-        const fetchAccounts = async () => {
-            try {
-                const data = await accountService.getMyAccounts();
-                setAccounts(data);
-                if (data.length > 0) setSelectedAccount(data[0].id);
-            } catch (error) {
-                toast.error('Failed to load accounts');
-            }
-        };
-        if (user) fetchAccounts();
+        if (user) fetchData();
     }, [user]);
 
     const handlePay = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
+            setLoading(true);
             const biller = billers.find(b => b.id === selectedBiller);
             await transactionService.payBill({
                 billerName: biller?.name || 'Utility',
@@ -57,9 +74,19 @@ export default function BillPayments() {
             setSelectedBiller(null);
             setAmount('');
             setConsumerNumber('');
+
+            // Refresh data to show new balance and transaction history
+            await fetchData();
         } catch (error: any) {
             toast.error(error.response?.data?.message || 'Payment failed');
+        } finally {
+            setLoading(false);
         }
+    };
+
+    const getBillerIcon = (billerName: string) => {
+        const biller = billers.find(b => b.name === billerName) || billers.find(b => billerName.includes(b.name));
+        return biller ? biller.icon : Zap;
     };
 
     return (
@@ -104,7 +131,7 @@ export default function BillPayments() {
                                             <SelectContent>
                                                 {accounts.map((acc) => (
                                                     <SelectItem key={acc.id} value={acc.id}>
-                                                        {acc.type.replace('_', ' ')} (**** {acc.accountNumber.slice(-4)})
+                                                        {acc.type.replace('_', ' ')} (**** {acc.accountNumber.slice(-4)}) - ${acc.balance.toLocaleString()}
                                                     </SelectItem>
                                                 ))}
                                             </SelectContent>
@@ -137,8 +164,8 @@ export default function BillPayments() {
                                         <Button type="button" variant="outline" onClick={() => setSelectedBiller(null)} className="flex-1">
                                             Cancel
                                         </Button>
-                                        <Button type="submit" className="flex-1">
-                                            Pay Bill
+                                        <Button type="submit" disabled={loading} className="flex-1">
+                                            {loading ? 'Processing...' : 'Pay Bill'}
                                         </Button>
                                     </div>
                                 </form>
@@ -148,23 +175,39 @@ export default function BillPayments() {
 
                     <GlassCard>
                         <h3 className="text-lg font-semibold mb-4">Recent Payments</h3>
-                        <div className="space-y-4">
-                            {[1, 2, 3, 4].map((i) => (
-                                <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-secondary/20 hover:bg-secondary/40 transition-colors">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-400">
-                                            <Droplets className="w-4 h-4" />
+                        {recentPayments.length > 0 ? (
+                            <div className="space-y-4">
+                                {recentPayments.map((tx) => {
+                                    const Icon = getBillerIcon(tx.reference || tx.description || '');
+                                    return (
+                                        <div key={tx.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/20 hover:bg-secondary/40 transition-colors">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                                                    <Icon className="w-4 h-4" />
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-medium">{tx.reference || tx.description}</p>
+                                                    <p className="text-xs text-muted-foreground">{format(new Date(tx.date), 'MMM d, h:mm a')}</p>
+                                                </div>
+                                            </div>
+                                            <span className="text-sm font-bold text-destructive">-${Math.abs(tx.amount).toFixed(2)}</span>
                                         </div>
-                                        <div>
-                                            <p className="text-sm font-medium">Water Bill</p>
-                                            <p className="text-xs text-muted-foreground">Today, 10:30 AM</p>
-                                        </div>
-                                    </div>
-                                    <span className="text-sm font-bold">-$45.00</span>
-                                </div>
-                            ))}
-                        </div>
-                        <Button variant="ghost" className="w-full mt-4 text-xs">View All History</Button>
+                                    );
+                                })}
+                            </div>
+                        ) : (
+                            <div className="text-center py-8 text-muted-foreground">
+                                <History className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                                <p>No recent bill payments</p>
+                            </div>
+                        )}
+                        <Button
+                            variant="ghost"
+                            className="w-full mt-4 text-xs"
+                            onClick={() => navigate('/customer/transactions?type=bill_payment')}
+                        >
+                            View All History
+                        </Button>
                     </GlassCard>
                 </div>
             </div>

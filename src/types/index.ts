@@ -74,17 +74,23 @@ export interface Account {
 
 export interface Transaction {
   id: string;
-  fromAccountId: string;
-  toAccountId: string;
+  fromAccountId?: string;
+  toAccountId?: string;
   amount: number;
   currency: string;
-  type: 'NEFT' | 'RTGS' | 'IMPS' | 'internal';
+  type: 'NEFT' | 'RTGS' | 'IMPS' | 'internal' | 'bill_payment' | 'deposit' | 'withdrawal' | 'transfer';
   status: 'completed' | 'pending' | 'failed';
   description: string;
-  timestamp: string;
-  riskScore: number;
-  isFlagged: boolean;
+  timestamp?: string;
+  date?: string;
+  createdAt?: string;
+  riskScore?: number;
+  isFlagged?: boolean;
   beneficiaryName?: string;
+  senderName?: string;
+  receiverName?: string;
+  category?: 'income' | 'expense' | 'bills' | 'shopping' | 'transfer';
+  reference?: string;
 }
 
 export interface Loan {
