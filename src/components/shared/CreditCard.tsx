@@ -144,7 +144,12 @@ export default function CreditCard({
 
                     <div className="w-16 h-12 rounded-lg bg-black/80 relative border border-cyan-400/60 shadow-[0_0_20px_rgba(0,255,255,0.2)] overflow-hidden flex items-center justify-center group-hover:scale-105 transition-transform duration-500">
                         {/* Internal Circuitry */}
-                        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/circuit-board.png')] opacity-40 invert sepia hue-rotate-180 saturate-200" />
+                        <div className="absolute inset-0 opacity-40 invert sepia hue-rotate-180 saturate-200"
+                            style={{
+                                backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M10 10h10v10H10V10zm20 20h10v10H30V30zm-10 20h10v10H20V50zm40-20h10v10H60V30zm20 20h10v10H80V50zM50 50h10v10H50V50zm-20 20h10v10H30V70zm40 0h10v10H70V70zM10 90h10v10H10V90zm80 0h10v10H90V90z' fill='%23ffffff' fill-opacity='0.4'/%3E%3Cpath d='M15 10v-5h70v5' stroke='%23ffffff' stroke-width='2' stroke-linecap='round'/%3E%3Cpath d='M15 95v5h70v-5' stroke='%23ffffff' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E")`,
+                                backgroundSize: '50px 50px'
+                            }}
+                        />
 
                         {/* Central Core */}
                         <div className="relative z-10 w-6 h-6 bg-cyan-900/40 border border-cyan-400 rounded flex items-center justify-center shadow-[0_0_10px_rgba(0,240,255,0.6)_inset]">
