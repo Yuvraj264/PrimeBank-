@@ -15,5 +15,10 @@ export const customerService = {
     updateCustomerStatus: async (id: string, status: 'active' | 'blocked') => {
         const response = await api.patch<{ status: string; data: User }>(`/customers/${id}/status`, { status });
         return response.data.data;
+    },
+
+    createCustomer: async (data: { name: string; email: string; phone: string; accountNumber: string; initialBalance?: number }) => {
+        const response = await api.post<{ status: string; data: any }>('/customers', data);
+        return response.data;
     }
 };

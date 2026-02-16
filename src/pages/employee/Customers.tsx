@@ -17,6 +17,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import AddCustomerDialog from './AddCustomerDialog';
 
 export default function Customers() {
     const navigate = useNavigate();
@@ -65,7 +66,7 @@ export default function Customers() {
                         <h1 className="text-2xl font-bold">Customers</h1>
                         <p className="text-muted-foreground text-sm mt-1">Manage and view customer profiles</p>
                     </div>
-                    <Button>Add Customer</Button>
+                    <AddCustomerDialog onSuccess={loadCustomers} />
                 </div>
 
                 <GlassCard>
@@ -113,10 +114,10 @@ export default function Customers() {
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end">
                                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                            <DropdownMenuItem className="gap-2" onClick={() => navigate(`/employee/customers/${customer.id}`)}>
+                                            <DropdownMenuItem className="gap-2" onClick={() => navigate(`/employee/customers/${customer.id || (customer as any)._id}`)}>
                                                 <UserIcon className="w-4 h-4" /> View Profile
                                             </DropdownMenuItem>
-                                            <DropdownMenuItem className="gap-2" onClick={() => navigate(`/employee/customers/${customer.id}`)}>
+                                            <DropdownMenuItem className="gap-2" onClick={() => navigate(`/employee/customers/${customer.id || (customer as any)._id}`)}>
                                                 <CreditCard className="w-4 h-4" /> View Accounts
                                             </DropdownMenuItem>
                                             <DropdownMenuItem className="gap-2">
@@ -126,14 +127,14 @@ export default function Customers() {
                                             {customer.status === 'blocked' ? (
                                                 <DropdownMenuItem
                                                     className="gap-2 text-green-500"
-                                                    onClick={() => handleStatusChange(customer.id, 'active')}
+                                                    onClick={() => handleStatusChange(customer.id || (customer as any)._id, 'active')}
                                                 >
                                                     Unblock Account
                                                 </DropdownMenuItem>
                                             ) : (
                                                 <DropdownMenuItem
                                                     className="gap-2 text-destructive"
-                                                    onClick={() => handleStatusChange(customer.id, 'blocked')}
+                                                    onClick={() => handleStatusChange(customer.id || (customer as any)._id, 'blocked')}
                                                 >
                                                     Freeze Account
                                                 </DropdownMenuItem>
