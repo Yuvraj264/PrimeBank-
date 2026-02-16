@@ -11,7 +11,7 @@ router.post('/apply', applyLoan);
 router.get('/my-loans', getMyLoans);
 
 // Employee/Admin routes
-router.get('/all', restrictTo('admin', 'employee'), getAllLoans);
+router.get('/', restrictTo('admin', 'employee'), getAllLoans);
 router.patch('/:id/status', restrictTo('admin', 'employee'), updateLoanStatus);
 
 export default router;

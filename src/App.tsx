@@ -23,6 +23,7 @@ import CustomerProfile from './pages/customer/CustomerProfile';
 import CardsAndAccounts from './pages/customer/CardsAndAccounts';
 import KYCSubmission from './pages/customer/KYCSubmission';
 import Customers from './pages/employee/Customers';
+import CustomerDetails from './pages/employee/CustomerDetails';
 import KYCVerification from './pages/employee/KYCVerification';
 import EmployeeTransactions from './pages/employee/EmployeeTransactions';
 import LoanApprovals from './pages/employee/LoanApprovals';
@@ -116,6 +117,11 @@ const App = () => (
             <Route path="/employee/customers" element={
               <ProtectedRoute allowedRoles={['employee']}>
                 <Customers />
+              </ProtectedRoute>
+            } />
+            <Route path="/employee/customers/:id" element={
+              <ProtectedRoute allowedRoles={['employee']}>
+                <CustomerDetails />
               </ProtectedRoute>
             } />
             <Route path="/employee/kyc" element={

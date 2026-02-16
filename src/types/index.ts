@@ -103,6 +103,12 @@ export interface Loan {
   status: 'approved' | 'pending' | 'rejected' | 'active';
   appliedAt: string;
   monthlyEmi: number;
+  creditScore?: number;
+  monthlyIncome?: number;
+  employmentStatus?: string;
+  approvedBy?: string;
+  approvedAt?: string;
+  adminComment?: string;
 }
 
 export interface Beneficiary {
@@ -119,7 +125,7 @@ export interface Beneficiary {
 export interface KYCDocument {
   id: string;
   userId: string;
-  type: 'aadhaar' | 'pan' | 'passport' | 'driving_license';
+  documentType: 'aadhaar' | 'pan' | 'passport' | 'driving_license' | 'voter_id';
   status: 'verified' | 'pending' | 'rejected';
   submittedAt: string;
   verifiedBy?: string;

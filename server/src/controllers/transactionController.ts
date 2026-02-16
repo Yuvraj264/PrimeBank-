@@ -219,3 +219,8 @@ export const payBill = catchAsync(async (req: AuthRequest, res: Response, next: 
         // session.endSession();
     }
 });
+
+export const getAllTransactions = catchAsync(async (req: AuthRequest, res: Response, next: NextFunction) => {
+    const transactions = await Transaction.find().populate('userId', 'name email').sort({ date: -1 });
+    res.status(200).json({ status: 'success', data: transactions });
+});

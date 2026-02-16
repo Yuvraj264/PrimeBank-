@@ -8,6 +8,11 @@ export const transactionService = {
         return response.data.data;
     },
 
+    getAllTransactions: async () => {
+        const response = await api.get<{ status: string; data: Transaction[] }>('/transactions');
+        return response.data.data;
+    },
+
     transfer: async (data: { receiverAccountNumber: string; amount: number; description?: string; fromAccountId?: string }) => {
         const response = await api.post('/transactions/transfer', data);
         return response.data;

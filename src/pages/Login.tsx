@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -17,6 +17,23 @@ export default function Login() {
   const [selectedRole, setSelectedRole] = useState<UserRole>('customer');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+
+  // Set default credentials for demo purposes
+  useEffect(() => {
+    switch (selectedRole) {
+      case 'employee':
+        setEmail('employee@ibank.com');
+        break;
+      case 'admin':
+        setEmail('admin@ibank.com');
+        break;
+      case 'customer':
+        setEmail('customer@ibank.com');
+        break;
+      default:
+        setEmail('');
+    }
+  }, [selectedRole]);
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const { loading, error } = useAppSelector((s) => s.auth);
@@ -109,7 +126,7 @@ export default function Login() {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
+                  placeholder="password123"
                   className="w-full pl-10 pr-4 py-2.5 bg-secondary/50 border border-border/30 rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-colors"
                 />
               </div>

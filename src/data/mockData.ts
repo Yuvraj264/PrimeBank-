@@ -13,6 +13,7 @@ export const mockUsers: User[] = [
     twoFactorEnabled: true,
     profileCompleted: true,
     personalDetails: {
+      fullName: 'Sarah Chen',
       dob: '1985-06-15',
       gender: 'female',
       maritalStatus: 'married',
@@ -76,6 +77,7 @@ export const mockUsers: User[] = [
     twoFactorEnabled: true,
     profileCompleted: true,
     personalDetails: {
+      fullName: 'Priya Sharma',
       dob: '1992-08-20',
       gender: 'female',
       maritalStatus: 'single',
@@ -327,7 +329,7 @@ export const mockKYCDocuments: KYCDocument[] = [
   {
     id: 'kyc-001',
     userId: 'cust-001',
-    type: 'passport',
+    documentType: 'passport',
     status: 'verified',
     submittedAt: '2024-06-10T08:00:00Z',
     verifiedBy: 'emp-001',
@@ -336,7 +338,7 @@ export const mockKYCDocuments: KYCDocument[] = [
   {
     id: 'kyc-002',
     userId: 'cust-002',
-    type: 'aadhaar',
+    documentType: 'aadhaar',
     status: 'pending',
     submittedAt: '2026-02-08T08:00:00Z',
     documentUrl: '/docs/aadhaar-002.pdf',
@@ -344,7 +346,7 @@ export const mockKYCDocuments: KYCDocument[] = [
   {
     id: 'kyc-003',
     userId: 'cust-003',
-    type: 'pan',
+    documentType: 'pan',
     status: 'rejected',
     submittedAt: '2026-01-25T08:00:00Z',
     verifiedBy: 'emp-001',

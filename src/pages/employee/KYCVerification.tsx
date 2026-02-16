@@ -1,19 +1,43 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import GlassCard from '@/components/shared/GlassCard';
 import StatusBadge from '@/components/shared/StatusBadge';
 import { Button } from '@/components/ui/button';
-import { mockKYCDocuments, mockUsers } from '@/data/mockData';
-import { Check, X, FileText, ExternalLink, Calendar, MapPin, Briefcase, User } from 'lucide-react';
+import { kycService } from '@/services/kycService';
+import { KYCDocument, User } from '@/types';
+import { Check, X, FileText, ExternalLink, Calendar, MapPin, Briefcase, User as UserIcon, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function KYCVerification() {
-    const [documents, setDocuments] = useState(mockKYCDocuments.filter(d => d.status === 'pending'));
+    const [documents, setDocuments] = useState<KYCDocument[]>([]);
+    const [loading, setLoading] = useState(true);
 
-    const handleAction = (id: string, action: 'verified' | 'rejected') => {
-        // In a real app, API call here
-        toast.success(`Document ${action} successfully`);
-        setDocuments(documents.filter(d => d.id !== id));
+    useEffect(() => {
+        loadDocuments();
+        const interval = setInterval(loadDocuments, 10000);
+        return () => clearInterval(interval);
+    }, []);
+
+    const loadDocuments = async () => {
+        try {
+            const data = await kycService.getPendingKYCRequests();
+            setDocuments(data);
+        } catch (error) {
+            console.error('Failed to load KYC documents:', error);
+            toast.error('Failed to load KYC requests');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleAction = async (id: string, action: 'approved' | 'rejected') => {
+        try {
+            await kycService.updateKYCStatus(id, action, `Document ${action} by employee`);
+            toast.success(`Document ${action} successfully`);
+            loadDocuments();
+        } catch (error) {
+            toast.error('Failed to update document status');
+        }
     };
 
     return (
@@ -25,18 +49,23 @@ export default function KYCVerification() {
                 </div>
 
                 <div className="grid grid-cols-1 gap-6">
-                    {documents.length > 0 ? (
+                    {loading ? (
+                        <div className="flex justify-center p-20">
+                            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                        </div>
+                    ) : documents.length > 0 ? (
                         documents.map((doc) => {
-                            const user = mockUsers.find(u => u.id === doc.userId);
+                            // userId is populated by backend
+                            const user = doc.userId as any;
                             return (
-                                <GlassCard key={doc.id} className="flex flex-col lg:flex-row gap-6">
+                                <GlassCard key={doc.id || (doc as any)._id || Math.random()} className="flex flex-col lg:flex-row gap-6">
                                     {/* Document Preview Section */}
                                     <div className="flex-1 space-y-4">
                                         <div className="flex justify-between items-start">
                                             <div>
                                                 <h3 className="font-semibold text-lg flex items-center gap-2">
                                                     <FileText className="w-5 h-5 text-primary" />
-                                                    {doc.type.toUpperCase().replace('_', ' ')}
+                                                    {doc.documentType?.toUpperCase().replace('_', ' ') || 'UNKNOWN TYPE'}
                                                 </h3>
                                                 <p className="text-sm text-muted-foreground">Submitted: {new Date(doc.submittedAt).toLocaleDateString()}</p>
                                             </div>
@@ -44,8 +73,14 @@ export default function KYCVerification() {
                                         </div>
 
                                         <div className="aspect-video bg-black/50 rounded-lg border border-border/50 flex items-center justify-center relative group overflow-hidden">
-                                            <div className="absolute inset-0 bg-cover bg-center opacity-50 block" style={{ backgroundImage: 'url(https://placehold.co/600x400/1a1a1a/666666?text=Document+Preview)' }}></div>
-                                            <Button variant="secondary" className="relative z-10 gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            {doc.documentUrl && (
+                                                <div className="absolute inset-0 bg-cover bg-center opacity-50 block" style={{ backgroundImage: `url(${doc.documentUrl})` }}></div>
+                                            )}
+                                            <Button
+                                                variant="secondary"
+                                                className="relative z-10 gap-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                onClick={() => window.open(doc.documentUrl, '_blank')}
+                                            >
                                                 <ExternalLink className="w-4 h-4" /> View Full Size
                                             </Button>
                                         </div>
@@ -57,17 +92,17 @@ export default function KYCVerification() {
 
                                         <div className="flex items-center gap-3 mb-4">
                                             <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-lg">
-                                                {user?.name.split(' ').map(n => n[0]).join('')}
+                                                <UserIcon className="w-6 h-6" />
                                             </div>
                                             <div>
-                                                <p className="font-semibold">{user?.name}</p>
+                                                <p className="font-semibold">{user?.name || 'Unknown User'}</p>
                                                 <p className="text-xs text-muted-foreground">{user?.email}</p>
                                             </div>
                                         </div>
 
                                         <div className="space-y-3 text-sm">
                                             <div className="flex gap-3">
-                                                <User className="w-4 h-4 text-muted-foreground shrink-0" />
+                                                <UserIcon className="w-4 h-4 text-muted-foreground shrink-0" />
                                                 <div>
                                                     <p className="text-muted-foreground text-xs">Personal</p>
                                                     <p>{user?.personalDetails?.gender || 'N/A'}, {user?.personalDetails?.dob || 'N/A'}</p>
@@ -98,7 +133,7 @@ export default function KYCVerification() {
                                                 <div>
                                                     <p className="text-muted-foreground text-xs">Professional</p>
                                                     <p>{user?.professionalDetails?.occupation || 'N/A'}</p>
-                                                    <p className="text-xs text-muted-foreground">Income: {user?.professionalDetails?.annualIncome ? `$${user?.professionalDetails.annualIncome.toLocaleString()}` : 'N/A'}</p>
+                                                    <p className="text-xs text-muted-foreground">Income: {user?.professionalDetails?.annualIncome ? `$${user.professionalDetails.annualIncome.toLocaleString()}` : 'N/A'}</p>
                                                 </div>
                                             </div>
                                         </div>
@@ -113,7 +148,7 @@ export default function KYCVerification() {
                                             </Button>
                                             <Button
                                                 className="gap-2 w-full bg-success hover:bg-success/90 text-white"
-                                                onClick={() => handleAction(doc.id, 'verified')}
+                                                onClick={() => handleAction(doc.id, 'approved')}
                                             >
                                                 <Check className="w-4 h-4" /> Approve
                                             </Button>

@@ -1,11 +1,12 @@
 import express from 'express';
-import { transferFound, getMyTransactions, deposit, withdraw, payBill } from '../controllers/transactionController';
-import { protect } from '../middleware/authMiddleware';
+import { transferFound, getMyTransactions, deposit, withdraw, payBill, getAllTransactions } from '../controllers/transactionController';
+import { protect, restrictTo } from '../middleware/authMiddleware';
 
 const router = express.Router();
 
 router.use(protect); // Protect all routes
 
+router.get('/', restrictTo('admin', 'employee'), getAllTransactions);
 router.get('/me', getMyTransactions);
 router.post('/transfer', transferFound);
 router.post('/deposit', deposit);

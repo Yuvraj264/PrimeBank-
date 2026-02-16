@@ -1,12 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import GlassCard from '@/components/shared/GlassCard';
 import StatusBadge from '@/components/shared/StatusBadge';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { mockTransactions, mockUsers } from '@/data/mockData';
-import { Search, Filter, Download, ArrowUpRight, ArrowDownRight, MoreHorizontal, Eye, Flag } from 'lucide-react';
+import { transactionService } from '@/services/transactionService';
+import { Transaction } from '@/types';
+import { Search, Filter, Download, ArrowUpRight, ArrowDownRight, MoreHorizontal, Eye, Flag, Loader2 } from 'lucide-react';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -14,19 +15,35 @@ import {
     DropdownMenuLabel,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { toast } from 'sonner';
 
 export default function EmployeeTransactions() {
     const [searchTerm, setSearchTerm] = useState('');
     const [typeFilter, setTypeFilter] = useState('all');
+    const [transactions, setTransactions] = useState<Transaction[]>([]);
+    const [loading, setLoading] = useState(true);
 
-    const filteredTransactions = mockTransactions.filter(t => {
-        // Mock user lookup - in real app we'd have the user object populated
-        const matchUserId = t.fromAccountId.includes('cust') ? t.fromAccountId : t.toAccountId;
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const user = mockUsers.find(u => u.id === 'cust-001'); // Simplified for mock
+    useEffect(() => {
+        loadTransactions();
+        const interval = setInterval(loadTransactions, 10000);
+        return () => clearInterval(interval);
+    }, []);
 
+    const loadTransactions = async () => {
+        try {
+            const data = await transactionService.getAllTransactions();
+            setTransactions(data);
+        } catch (error) {
+            console.error('Failed to load transactions:', error);
+            toast.error('Failed to load transactions');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const filteredTransactions = transactions.filter(t => {
         // Safe string comparison
-        const searchString = `${t.description} ${t.id}`.toLowerCase();
+        const searchString = `${t.description} ${t.id} ${t.senderName || ''} ${t.receiverName || ''}`.toLowerCase();
         const matchesSearch = searchString.includes(searchTerm.toLowerCase());
 
         // Filter by strict types or 'all'
@@ -74,6 +91,9 @@ export default function EmployeeTransactions() {
                                     <SelectItem value="NEFT">NEFT</SelectItem>
                                     <SelectItem value="RTGS">RTGS</SelectItem>
                                     <SelectItem value="IMPS">IMPS</SelectItem>
+                                    <SelectItem value="deposit">Deposit</SelectItem>
+                                    <SelectItem value="withdrawal">Withdrawal</SelectItem>
+                                    <SelectItem value="bill_payment">Bill Payment</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
@@ -81,29 +101,33 @@ export default function EmployeeTransactions() {
 
                     {/* List */}
                     <div className="space-y-2">
-                        {filteredTransactions.length > 0 ? (
+                        {loading ? (
+                            <div className="flex justify-center p-20">
+                                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                            </div>
+                        ) : filteredTransactions.length > 0 ? (
                             filteredTransactions.map((txn) => {
                                 // Infer direction based on type/account for demo purposes
                                 // In a real app, this would be determined by the context (credit vs debit)
-                                const isPositive = txn.type === 'internal';
+                                const isPositive = txn.type === 'deposit' || txn.category === 'income';
+                                const user = (txn as any).userId; // Populated by backend
 
                                 return (
                                     <div key={txn.id} className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center p-4 rounded-xl bg-secondary/10 border border-border/5 hover:bg-secondary/20 transition-colors">
-
                                         <div className="md:col-span-5 flex items-center gap-4">
                                             <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isPositive ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'}`}>
                                                 {isPositive ? <ArrowDownRight className="w-5 h-5" /> : <ArrowUpRight className="w-5 h-5" />}
                                             </div>
                                             <div>
                                                 <p className="font-semibold text-sm">{txn.description}</p>
-                                                <p className="text-xs text-muted-foreground font-mono">TXN-{txn.id}</p>
+                                                <p className="text-xs text-muted-foreground font-mono">TXN-{txn.id?.substring(0, 8)}...</p>
                                             </div>
                                         </div>
 
                                         <div className="md:col-span-3">
                                             <div className="flex flex-col">
-                                                <span className="text-sm">Account {txn.fromAccountId}</span>
-                                                <span className="text-xs text-muted-foreground">{new Date(txn.timestamp).toLocaleString()}</span>
+                                                <span className="text-sm">{user?.name || 'Unknown User'}</span>
+                                                <span className="text-xs text-muted-foreground">{new Date(txn.date || txn.createdAt || Date.now()).toLocaleString()}</span>
                                             </div>
                                         </div>
 
