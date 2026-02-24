@@ -1,30 +1,59 @@
+import { useEffect, useState } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import GlassCard from '@/components/shared/GlassCard';
 import AnimatedCounter from '@/components/shared/AnimatedCounter';
 import StatusBadge from '@/components/shared/StatusBadge';
 import { useAppSelector } from '@/store';
-import { mockUsers, mockAccounts, mockTransactions, mockLoans, monthlyTransactionData } from '@/data/mockData';
+import { adminService } from '@/services/adminService';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { motion } from 'framer-motion';
 import {
   Users, Landmark, TrendingUp, TrendingDown, AlertTriangle,
-  Activity, DollarSign, ShieldAlert
+  Activity, ShieldAlert, Loader2
 } from 'lucide-react';
+import { toast } from 'sonner';
 
 export default function AdminDashboard() {
   const { user } = useAppSelector((s) => s.auth);
-  const totalDeposits = monthlyTransactionData.reduce((s, m) => s + m.deposits, 0);
-  const totalWithdrawals = monthlyTransactionData.reduce((s, m) => s + m.withdrawals, 0);
-  const activeLoans = mockLoans.filter((l) => l.status === 'active' || l.status === 'approved');
-  const flaggedTxns = mockTransactions.filter((t) => t.isFlagged);
-  const totalUsers = mockUsers.filter((u) => u.role === 'customer').length;
-  const totalEmployees = mockUsers.filter((u) => u.role === 'employee').length;
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState<any>(null);
 
-  const stats = [
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const data = await adminService.getStats();
+        setStats(data.data);
+      } catch (error) {
+        console.error('Failed to fetch admin stats:', error);
+        toast.error('Failed to load dashboard statistics');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStats();
+  }, []);
+
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-[calc(100vh-100px)]">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (!stats) return null;
+
+  const totalDeposits = stats.monthlyData.reduce((s: number, m: any) => s + m.deposits, 0);
+  const totalWithdrawals = stats.monthlyData.reduce((s: number, m: any) => s + m.withdrawals, 0);
+
+  const statCards = [
     { label: 'Total Deposits', value: totalDeposits, prefix: '$', icon: TrendingUp, color: 'text-success' },
     { label: 'Total Withdrawals', value: totalWithdrawals, prefix: '$', icon: TrendingDown, color: 'text-warning' },
-    { label: 'Active Loans', value: activeLoans.length, icon: Landmark, color: 'text-primary' },
-    { label: 'Flagged Alerts', value: flaggedTxns.length, icon: AlertTriangle, color: 'text-destructive' },
+    { label: 'Active Loans', value: stats.activeLoans, icon: Landmark, color: 'text-primary' },
+    { label: 'Flagged Alerts', value: stats.flaggedTransactions, icon: AlertTriangle, color: 'text-destructive' },
   ];
 
   return (
@@ -39,7 +68,7 @@ export default function AdminDashboard() {
 
         {/* Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {stats.map((s, i) => (
+          {statCards.map((s, i) => (
             <GlassCard key={s.label} delay={i * 0.05}>
               <div className="flex items-center gap-3">
                 <div className={`w-10 h-10 rounded-lg bg-secondary/50 flex items-center justify-center ${s.color}`}>
@@ -65,7 +94,7 @@ export default function AdminDashboard() {
               <Users className="w-6 h-6 text-primary" />
             </div>
             <div>
-              <AnimatedCounter value={totalUsers} className="text-3xl font-bold" />
+              <AnimatedCounter value={stats.totalCustomers} className="text-3xl font-bold" />
               <p className="text-sm text-muted-foreground">Total Customers</p>
             </div>
           </GlassCard>
@@ -74,7 +103,7 @@ export default function AdminDashboard() {
               <Activity className="w-6 h-6 text-success" />
             </div>
             <div>
-              <AnimatedCounter value={totalEmployees} className="text-3xl font-bold" />
+              <AnimatedCounter value={stats.totalEmployees} className="text-3xl font-bold" />
               <p className="text-sm text-muted-foreground">Total Employees</p>
             </div>
           </GlassCard>
@@ -84,7 +113,7 @@ export default function AdminDashboard() {
         <GlassCard delay={0.3}>
           <h3 className="text-sm font-semibold mb-4">Monthly Transaction Volume</h3>
           <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={monthlyTransactionData}>
+            <BarChart data={stats.monthlyData}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(222, 30%, 16%)" />
               <XAxis dataKey="month" tick={{ fill: 'hsl(215, 20%, 55%)', fontSize: 12 }} axisLine={false} />
               <YAxis tick={{ fill: 'hsl(215, 20%, 55%)', fontSize: 12 }} axisLine={false} tickFormatter={(v) => `$${v / 1000}k`} />
@@ -96,39 +125,6 @@ export default function AdminDashboard() {
               <Bar dataKey="withdrawals" fill="hsl(234, 89%, 74%)" radius={[4, 4, 0, 0]} name="Withdrawals" />
             </BarChart>
           </ResponsiveContainer>
-        </GlassCard>
-
-        {/* Flagged Transactions */}
-        <GlassCard delay={0.35}>
-          <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
-            <ShieldAlert className="w-4 h-4 text-destructive" /> Flagged Transactions
-          </h3>
-          <div className="space-y-3">
-            {flaggedTxns.length === 0 && (
-              <p className="text-sm text-muted-foreground">No flagged transactions</p>
-            )}
-            {flaggedTxns.map((txn) => (
-              <motion.div
-                key={txn.id}
-                className="flex items-center justify-between p-3 rounded-lg bg-destructive/5 border border-destructive/15"
-                animate={{ borderColor: ['hsl(0, 72%, 51%, 0.15)', 'hsl(0, 72%, 51%, 0.3)', 'hsl(0, 72%, 51%, 0.15)'] }}
-                transition={{ duration: 2, repeat: Infinity }}
-              >
-                <div>
-                  <p className="text-sm font-medium">{txn.description}</p>
-                  <p className="text-xs text-muted-foreground">
-                    ${txn.amount.toLocaleString()} · Risk Score: {txn.riskScore}/100
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <StatusBadge status={txn.status} />
-                  <button className="px-3 py-1 text-xs rounded-lg bg-destructive/15 text-destructive border border-destructive/20 hover:bg-destructive/25 transition-colors">
-                    Freeze
-                  </button>
-                </div>
-              </motion.div>
-            ))}
-          </div>
         </GlassCard>
       </div>
     </DashboardLayout>

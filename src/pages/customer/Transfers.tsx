@@ -1,284 +1,81 @@
-import { useState, useEffect } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
+import TransferWizard from '@/components/transfers/TransferWizard';
 import GlassCard from '@/components/shared/GlassCard';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useAppSelector } from '@/store';
-import { accountService } from '@/services/accountService';
-import { transactionService } from '@/services/transactionService';
-import { toast } from 'sonner';
-import { ArrowRight, Wallet, User as UserIcon, Globe, Building2, ArrowDownCircle } from 'lucide-react';
+import { User as UserIcon } from 'lucide-react';
 
 export default function Transfers() {
-  const { user } = useAppSelector((s) => s.auth);
-  const [accounts, setAccounts] = useState<any[]>([]);
-  const [amount, setAmount] = useState('');
-  const [recipient, setRecipient] = useState('');
-  const [fromAccount, setFromAccount] = useState('');
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchAccounts = async () => {
-      try {
-        const data = await accountService.getMyAccounts();
-        setAccounts(data);
-        if (data.length > 0) setFromAccount(data[0].id);
-      } catch (error) {
-        toast.error('Failed to load accounts');
-      } finally {
-        setLoading(false);
-      }
-    };
-    if (user) fetchAccounts();
-  }, [user]);
-
-  const handleTransfer = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!amount || isNaN(Number(amount)) || !fromAccount || !recipient) {
-      toast.error('Please fill all fields correctly');
-      return;
-    }
-
-    try {
-      await transactionService.transfer({
-        receiverAccountNumber: recipient,
-        amount: Number(amount),
-        description: 'Transfer',
-        fromAccountId: fromAccount
-      });
-      toast.success('Transfer successful');
-      setAmount('');
-      setRecipient('');
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Transfer failed');
-    }
-  };
-
-  const handleDeposit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
-      toast.error('Please enter a valid amount');
-      return;
-    }
-
-    try {
-      await transactionService.deposit({
-        amount: Number(amount)
-      });
-      toast.success('Deposit successful');
-      setAmount('');
-      // Refresh accounts to show new balance
-      const data = await accountService.getMyAccounts();
-      setAccounts(data);
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Deposit failed');
-    }
-  };
-
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 animate-in fade-in duration-500">
         <div>
-          <h1 className="text-2xl font-bold">Transfers</h1>
-          <p className="text-muted-foreground text-sm mt-1">Move money securely between accounts</p>
+          <h1 className="text-2xl font-bold tracking-tight">Transfers & Payments</h1>
+          <p className="text-muted-foreground text-sm mt-1">Move money securely to anyone, anywhere.</p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <GlassCard className="lg:col-span-2">
-            <Tabs defaultValue="internal" className="w-full">
-              <TabsList className="grid w-full grid-cols-4 mb-6 bg-secondary/30">
-                <TabsTrigger value="internal" className="flex items-center gap-2">
-                  <Wallet className="w-4 h-4" /> Own Accounts
-                </TabsTrigger>
-                <TabsTrigger value="domestic" className="flex items-center gap-2">
-                  <Building2 className="w-4 h-4" /> Domestic
-                </TabsTrigger>
-                <TabsTrigger value="international" className="flex items-center gap-2">
-                  <Globe className="w-4 h-4" /> International
-                </TabsTrigger>
-                <TabsTrigger value="deposit" className="flex items-center gap-2">
-                  <ArrowDownCircle className="w-4 h-4" /> Deposit
-                </TabsTrigger>
-              </TabsList>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+          <div className="lg:col-span-2 relative z-10">
+            <TransferWizard />
+          </div>
 
-              <TabsContent value="internal">
-                <form onSubmit={handleTransfer} className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>From Account</Label>
-                      <Select value={fromAccount} onValueChange={setFromAccount}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select account" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {accounts.map((acc) => (
-                            <SelectItem key={acc.id} value={acc.id}>
-                              {acc.type.replace('_', ' ')} (**** {acc.accountNumber.slice(-4)})
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>To Account</Label>
-                      <Select onValueChange={(val) => {
-                        const acc = accounts.find(a => a.id === val);
-                        if (acc) setRecipient(acc.accountNumber);
-                      }}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select account" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {accounts.filter(a => a.id !== fromAccount).map((acc) => (
-                            <SelectItem key={acc.id} value={acc.id}>
-                              {acc.type.replace('_', ' ')} (**** {acc.accountNumber.slice(-4)})
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Amount</Label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-                      <Input
-                        type="number"
-                        placeholder="0.00"
-                        className="pl-8"
-                        value={amount}
-                        onChange={(e) => setAmount(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                  <Button type="submit" className="w-full">
-                    Transfer Now <ArrowRight className="w-4 h-4 ml-2" />
-                  </Button>
-                </form>
-              </TabsContent>
-
-              <TabsContent value="domestic">
-                <form onSubmit={handleTransfer} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>From Account</Label>
-                    <Select value={fromAccount} onValueChange={setFromAccount}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select account" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {accounts.map((acc) => (
-                          <SelectItem key={acc.id} value={acc.id}>
-                            {acc.type.replace('_', ' ')} (**** {acc.accountNumber.slice(-4)})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Recipient Account Number</Label>
-                    <Input
-                      placeholder="Enter account number"
-                      value={recipient}
-                      onChange={(e) => setRecipient(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Amount</Label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-                      <Input
-                        type="number"
-                        placeholder="0.00"
-                        className="pl-8"
-                        value={amount}
-                        onChange={(e) => setAmount(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                  <Button type="submit" className="w-full">
-                    Transfer Now <ArrowRight className="w-4 h-4 ml-2" />
-                  </Button>
-                </form>
-              </TabsContent>
-              <TabsContent value="international">
-                <div className="p-8 text-center text-muted-foreground">
-                  <Globe className="w-12 h-12 mx-auto mb-3 opacity-20" />
-                  <p>International transfers are currently disabled for your region.</p>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="deposit">
-                <form onSubmit={handleDeposit} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>Amount to Deposit</Label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-                      <Input
-                        type="number"
-                        placeholder="0.00"
-                        className="pl-8"
-                        value={amount}
-                        onChange={(e) => setAmount(e.target.value)}
-                      />
-                    </div>
-                    <p className="text-xs text-muted-foreground">Funds will be deposited to your primary account.</p>
-                  </div>
-                  <Button type="submit" className="w-full">
-                    Deposit Funds <ArrowDownCircle className="w-4 h-4 ml-2" />
-                  </Button>
-                </form>
-              </TabsContent>
-            </Tabs>
-          </GlassCard>
-
-          <div className="space-y-6">
-            <GlassCard>
-              <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                <UserIcon className="w-4 h-4 text-primary" /> Quick Transfer
+          <div className="space-y-6 lg:sticky lg:top-6">
+            <GlassCard className="border border-border/50 bg-card/40 backdrop-blur-md shadow-sm">
+              <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
+                <UserIcon className="w-4 h-4 text-primary" /> Quick Send
               </h3>
-              <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
-                {[1, 2, 3, 4].map(i => (
-                  <div key={i} className="flex flex-col items-center gap-1 min-w-[60px] cursor-pointer hover:opacity-80">
-                    <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center text-xs font-bold border border-border/50">
-                      U{i}
+              <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-none">
+                {[
+                  { name: 'Sarah', cls: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' },
+                  { name: 'Mike', cls: 'bg-blue-500/10 text-blue-500 border-blue-500/20' },
+                  { name: 'Alex', cls: 'bg-amber-500/10 text-amber-500 border-amber-500/20' },
+                  { name: 'Mom', cls: 'bg-purple-500/10 text-purple-500 border-purple-500/20' }
+                ].map((user, i) => (
+                  <div key={i} className="flex flex-col items-center gap-2 min-w-[64px] cursor-pointer group">
+                    <div className={`w-14 h-14 rounded-full flex items-center justify-center text-sm font-bold border transition-all duration-300 group-hover:scale-105 group-hover:shadow-md ${user.cls}`}>
+                      {user.name.charAt(0)}
                     </div>
-                    <span className="text-[10px] text-muted-foreground">User {i}</span>
+                    <span className="text-xs font-medium text-muted-foreground group-hover:text-foreground transition-colors">{user.name}</span>
                   </div>
                 ))}
-                <div className="flex flex-col items-center gap-1 min-w-[60px] cursor-pointer hover:opacity-80">
-                  <div className="w-12 h-12 rounded-full border-2 border-dashed border-border flex items-center justify-center text-muted-foreground">
+                <div className="flex flex-col items-center gap-2 min-w-[64px] cursor-pointer group">
+                  <div className="w-14 h-14 rounded-full border-2 border-dashed border-border flex items-center justify-center text-muted-foreground transition-all duration-300 group-hover:border-primary group-hover:text-primary group-hover:scale-105">
                     +
                   </div>
-                  <span className="text-[10px] text-muted-foreground">Add</span>
+                  <span className="text-xs font-medium text-muted-foreground group-hover:text-foreground transition-colors">Add</span>
                 </div>
               </div>
             </GlassCard>
-            <GlassCard className="bg-gradient-to-br from-primary/10 to-transparent border-primary/20">
-              <h3 className="text-sm font-semibold mb-2">Transfer Limits</h3>
-              <div className="space-y-3">
+
+            <GlassCard className="bg-gradient-to-br from-primary/5 via-card/50 to-transparent border border-primary/10 shadow-sm relative overflow-hidden">
+              <div className="absolute -right-10 -top-10 w-40 h-40 bg-primary/5 rounded-full blur-3xl" />
+              <h3 className="text-sm font-semibold mb-5 relative z-10">Your Limits</h3>
+              <div className="space-y-5 relative z-10">
                 <div>
-                  <div className="flex justify-between text-xs mb-1">
-                    <span>Daily Limit</span>
-                    <span className="text-muted-foreground">$5,000.00</span>
+                  <div className="flex justify-between text-xs mb-2">
+                    <span className="font-medium">Daily Transfer Limit</span>
+                    <span className="text-muted-foreground font-medium">$5,000.00</span>
                   </div>
-                  <div className="h-1.5 w-full bg-secondary rounded-full overflow-hidden">
-                    <div className="h-full bg-primary w-[35%] rounded-full" />
+                  <div className="h-2 w-full bg-secondary/60 rounded-full overflow-hidden">
+                    <div className="h-full bg-primary w-[35%] rounded-full shadow-[0_0_10px_rgba(var(--primary),0.5)]" />
                   </div>
+                  <p className="text-[10px] text-muted-foreground mt-1.5 text-right">$1,750.00 used</p>
                 </div>
                 <div>
-                  <div className="flex justify-between text-xs mb-1">
-                    <span>Monthly Limit</span>
-                    <span className="text-muted-foreground">$50,000.00</span>
+                  <div className="flex justify-between text-xs mb-2">
+                    <span className="font-medium">Monthly Limit</span>
+                    <span className="text-muted-foreground font-medium">$50,000.00</span>
                   </div>
-                  <div className="h-1.5 w-full bg-secondary rounded-full overflow-hidden">
-                    <div className="h-full bg-primary w-[15%] rounded-full" />
+                  <div className="h-2 w-full bg-secondary/60 rounded-full overflow-hidden">
+                    <div className="h-full bg-primary w-[15%] rounded-full shadow-[0_0_10px_rgba(var(--primary),0.5)]" />
                   </div>
+                  <p className="text-[10px] text-muted-foreground mt-1.5 text-right">$7,500.00 used</p>
                 </div>
               </div>
             </GlassCard>
+
+            <div className="bg-card/30 rounded-xl p-4 border border-border text-xs text-muted-foreground flex items-start gap-3">
+              <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
+              <p>For large transfers exceeding your daily limit, please contact your account manager or use our secure scheduled transfer feature.</p>
+            </div>
           </div>
         </div>
       </div>

@@ -1,16 +1,18 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import GlassCard from '@/components/shared/GlassCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Settings, Save, AlertTriangle, Globe, Shield, Lock, CreditCard } from 'lucide-react';
+import { adminService } from '@/services/adminService';
+import { Save, Globe, Shield, CreditCard, AlertTriangle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function SystemConfig() {
-    const [loading, setLoading] = useState(false);
-    const [config, setConfig] = useState({
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+    const [config, setConfig] = useState<any>({
         maintenanceMode: false,
         allowNewRegistrations: true,
         require2FA: true,
@@ -21,13 +23,63 @@ export default function SystemConfig() {
         systemEmail: 'admin@primebank.com'
     });
 
-    const handleSave = () => {
-        setLoading(true);
-        setTimeout(() => {
-            setLoading(false);
+    useEffect(() => {
+        const fetchConfig = async () => {
+            try {
+                const data = await adminService.getConfig();
+                if (data.data) setConfig(data.data);
+            } catch (error) {
+                console.error('Failed to fetch config:', error);
+                toast.error('Failed to load system configuration');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchConfig();
+    }, []);
+
+    const handleSave = async () => {
+        setSaving(true);
+        try {
+            await adminService.updateConfig(config);
             toast.success("System configuration updated successfully");
-        }, 1000);
+        } catch (error) {
+            console.error('Failed to save config:', error);
+            toast.error('Failed to save system configuration');
+        } finally {
+            setSaving(false);
+        }
     };
+
+    const handleClearCache = async () => {
+        try {
+            await adminService.clearSystemCache();
+            toast.success("System cache cleared successfully");
+        } catch (error) {
+            toast.error("Failed to clear system cache");
+        }
+    };
+
+    const handleResetSessions = async () => {
+        if (!confirm("Are you sure? This will log out all users.")) return;
+        try {
+            await adminService.resetAllSessions();
+            toast.success("All user sessions have been reset");
+        } catch (error) {
+            toast.error("Failed to reset sessions");
+        }
+    };
+
+    if (loading) {
+        return (
+            <DashboardLayout>
+                <div className="flex justify-center py-20">
+                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                </div>
+            </DashboardLayout>
+        );
+    }
 
     return (
         <DashboardLayout>
@@ -37,8 +89,8 @@ export default function SystemConfig() {
                         <h1 className="text-2xl font-bold">System Configuration</h1>
                         <p className="text-muted-foreground text-sm mt-1">Global settings and parameters</p>
                     </div>
-                    <Button onClick={handleSave} disabled={loading} className="gap-2">
-                        {loading ? 'Saving...' : <><Save className="w-4 h-4" /> Save Changes</>}
+                    <Button onClick={handleSave} disabled={saving} className="gap-2">
+                        {saving ? 'Saving...' : <><Save className="w-4 h-4" /> Save Changes</>}
                     </Button>
                 </div>
 
@@ -101,7 +153,7 @@ export default function SystemConfig() {
                                 <Input
                                     type="number"
                                     value={config.maxLoginAttempts}
-                                    onChange={(e) => setConfig({ ...config, maxLoginAttempts: parseInt(e.target.value) })}
+                                    onChange={(e) => setConfig({ ...config, maxLoginAttempts: parseInt(e.target.value) || 0 })}
                                 />
                             </div>
                             <div className="space-y-2">
@@ -109,7 +161,7 @@ export default function SystemConfig() {
                                 <Input
                                     type="number"
                                     value={config.sessionTimeoutMins}
-                                    onChange={(e) => setConfig({ ...config, sessionTimeoutMins: parseInt(e.target.value) })}
+                                    onChange={(e) => setConfig({ ...config, sessionTimeoutMins: parseInt(e.target.value) || 0 })}
                                 />
                             </div>
                         </div>
@@ -127,7 +179,7 @@ export default function SystemConfig() {
                                     <Input
                                         type="number"
                                         value={config.minTransferLimit}
-                                        onChange={(e) => setConfig({ ...config, minTransferLimit: parseInt(e.target.value) })}
+                                        onChange={(e) => setConfig({ ...config, minTransferLimit: parseInt(e.target.value) || 0 })}
                                     />
                                 </div>
                                 <div className="space-y-2">
@@ -135,7 +187,7 @@ export default function SystemConfig() {
                                     <Input
                                         type="number"
                                         value={config.maxTransferLimit}
-                                        onChange={(e) => setConfig({ ...config, maxTransferLimit: parseInt(e.target.value) })}
+                                        onChange={(e) => setConfig({ ...config, maxTransferLimit: parseInt(e.target.value) || 0 })}
                                     />
                                 </div>
                             </div>
@@ -150,8 +202,19 @@ export default function SystemConfig() {
                         <div className="space-y-4">
                             <p className="text-sm text-muted-foreground">Irreversible system actions. Proceed with caution.</p>
                             <div className="flex gap-4">
-                                <Button variant="outline" className="border-destructive/50 hover:bg-destructive/10 text-destructive">Clear Cache</Button>
-                                <Button variant="destructive">Reset All Sessions</Button>
+                                <Button
+                                    variant="outline"
+                                    className="border-destructive/50 hover:bg-destructive/10 text-destructive"
+                                    onClick={handleClearCache}
+                                >
+                                    Clear Cache
+                                </Button>
+                                <Button
+                                    variant="destructive"
+                                    onClick={handleResetSessions}
+                                >
+                                    Reset All Sessions
+                                </Button>
                             </div>
                         </div>
                     </GlassCard>

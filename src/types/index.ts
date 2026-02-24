@@ -91,6 +91,8 @@ export interface Transaction {
   receiverName?: string;
   category?: 'income' | 'expense' | 'bills' | 'shopping' | 'transfer';
   reference?: string;
+  note?: string;
+  tags?: string[];
 }
 
 export interface Loan {

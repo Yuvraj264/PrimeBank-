@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
-import { motion, useMotionTemplate, useMotionValue, useSpring } from 'framer-motion';
-import { Wifi, Eye, EyeOff, Loader2, Cpu } from 'lucide-react';
+import { motion, useMotionTemplate, useMotionValue, useSpring, AnimatePresence } from 'framer-motion';
+import { Wifi, Eye, EyeOff, Loader2, Cpu, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import {
@@ -35,6 +35,7 @@ export default function CreditCard({
     const [showPasswordModal, setShowPasswordModal] = useState(false);
     const [password, setPassword] = useState('');
     const [verifying, setVerifying] = useState(false);
+    const [isFlipped, setIsFlipped] = useState(false); // Controls 3D flipping
 
     // Mouse tilt effect
     const ref = useRef<HTMLDivElement>(null);
@@ -74,8 +75,11 @@ export default function CreditCard({
             setIsRevealed(true);
             setShowPasswordModal(false);
             setPassword('');
-            toast.success("Card details revealed");
-            setTimeout(() => setIsRevealed(false), 30000);
+            toast.success("Card data decrypted");
+            setTimeout(() => {
+                setIsRevealed(false);
+                setIsFlipped(false);
+            }, 30000);
         } catch (error: any) {
             toast.error(error || "Incorrect password");
         } finally {
@@ -88,167 +92,158 @@ export default function CreditCard({
         return `${num.slice(0, 4)}    ••••    ••••    ${num.slice(-4)}`;
     };
 
-    // Shared Card Content for Main and Reflection
-    const CardContent = () => (
+    const BaseCardStyles = () => (
         <>
-            {/* --- 1. Base: Brushed Metallic Black w/ subtle Hex --- */}
-            <div className="absolute inset-0 bg-[#050505] rounded-2xl overflow-hidden">
-                {/* Metal Brush Texture */}
+            <div className="absolute inset-0 bg-[#050505] rounded-2xl overflow-hidden pointer-events-none">
                 <div className="absolute inset-0 opacity-20"
                     style={{
                         backgroundImage: `repeating-linear-gradient(90deg, transparent 0, transparent 1px, rgba(255,255,255,0.03) 1px, rgba(255,255,255,0.03) 2px)`,
                         backgroundSize: '4px 100%'
                     }}
                 />
-                {/* Hexagonal Pattern - Very Subtle Matte */}
                 <div className="absolute inset-0 opacity-[0.05]"
                     style={{
                         backgroundImage: `url("data:image/svg+xml,%3Csvg width='24' height='28' viewBox='0 0 24 28' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M12 0l12 7v14l-12 7L0 21V7z' fill='none' stroke='%23ffffff' stroke-width='0.5'/%3E%3C/svg%3E")`,
                         backgroundSize: '24px 28px'
                     }}
                 />
-                {/* Cinematic Spotlight (Top Right) */}
-                <div className="absolute top-[-50%] right-[-50%] w-[150%] h-[150%] bg-radial-gradient from-white/10 via-transparent to-transparent blur-3xl opacity-40 pointer-events-none" />
             </div>
-
-            {/* --- 2. Beveled Edge & Rim Lights (Studio Lighting) --- */}
-            {/* Top/Left White Rim Light */}
             <div className="absolute inset-0 rounded-2xl border-t border-l border-white/20 pointer-events-none mix-blend-overlay" />
-            {/* Bottom/Right Blue Rim Light */}
             <div className="absolute inset-0 rounded-2xl border-b border-r border-cyan-500/30 pointer-events-none mix-blend-screen" />
-
-            {/* Glossy Reflection Sheen */}
             <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-transparent skew-y-12 pointer-events-none opacity-30" />
-
-
-            {/* --- Content Layer (Sharp Focus) --- */}
-            <div className="relative z-10 h-full flex flex-col justify-between p-8 select-none">
-
-                {/* Top: Name Logo */}
-                <div className="flex justify-between items-start">
-                    <h1 className="text-xl font-light tracking-[0.4em] uppercase text-white/95 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]"
-                        style={{
-                            fontFamily: '"Michroma", "Segoe UI", sans-serif',
-                            textShadow: '0 0 1px rgba(255,255,255,0.5)' // Sharp etching
-                        }}
-                    >
-                        PRIME BANK
-                    </h1>
-                    <Wifi className="w-6 h-6 text-cyan-500 rotate-90 drop-shadow-[0_0_5px_rgba(0,255,255,0.8)] opacity-90" />
-                </div>
-
-                {/* Middle: The HERO Holographic Chip */}
-                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 flex items-center justify-center pointer-events-none perspective-500">
-                    {/* Glowing Backdrop */}
-                    <div className="absolute inset-0 bg-cyan-500 blur-[40px] opacity-20" />
-
-                    <div className="w-16 h-12 rounded-lg bg-black/80 relative border border-cyan-400/60 shadow-[0_0_20px_rgba(0,255,255,0.2)] overflow-hidden flex items-center justify-center group-hover:scale-105 transition-transform duration-500">
-                        {/* Internal Circuitry */}
-                        <div className="absolute inset-0 opacity-40 invert sepia hue-rotate-180 saturate-200"
-                            style={{
-                                backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M10 10h10v10H10V10zm20 20h10v10H30V30zm-10 20h10v10H20V50zm40-20h10v10H60V30zm20 20h10v10H80V50zM50 50h10v10H50V50zm-20 20h10v10H30V70zm40 0h10v10H70V70zM10 90h10v10H10V90zm80 0h10v10H90V90z' fill='%23ffffff' fill-opacity='0.4'/%3E%3Cpath d='M15 10v-5h70v5' stroke='%23ffffff' stroke-width='2' stroke-linecap='round'/%3E%3Cpath d='M15 95v5h70v-5' stroke='%23ffffff' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E")`,
-                                backgroundSize: '50px 50px'
-                            }}
-                        />
-
-                        {/* Central Core */}
-                        <div className="relative z-10 w-6 h-6 bg-cyan-900/40 border border-cyan-400 rounded flex items-center justify-center shadow-[0_0_10px_rgba(0,240,255,0.6)_inset]">
-                            <Cpu className="w-3 h-3 text-cyan-200 drop-shadow-[0_0_5px_white]" />
-                        </div>
-
-                        {/* Holographic Scan Line Animation */}
-                        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-cyan-400/30 to-transparent h-[200%] w-full animate-scan-fast pointer-events-none" />
-                    </div>
-                </div>
-
-                {/* Bottom: Typography */}
-                <div className="flex flex-col gap-5 mt-auto">
-                    <div className="flex items-center justify-between">
-                        <p
-                            className="text-2xl tracking-[0.14em] text-cyan-50 font-light mix-blend-screen"
-                            style={{
-                                fontFamily: 'Consolas, monospace',
-                                textShadow: '0 0 8px rgba(0, 200, 255, 0.3)'
-                            }}
-                        >
-                            {isRevealed ? (cardNumber.match(/.{1,4}/g)?.join(' ') || cardNumber) : maskCardNumber(cardNumber)}
-                        </p>
-                        <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-8 w-8 text-cyan-400/40 hover:text-cyan-200 hover:bg-cyan-900/10 rounded-full"
-                            onClick={() => isRevealed ? setIsRevealed(false) : setShowPasswordModal(true)}
-                        >
-                            {isRevealed ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                        </Button>
-                    </div>
-
-                    <div className="flex justify-between items-end border-t border-white/5 pt-3">
-                        <div>
-                            <p className="text-[8px] text-cyan-100/40 uppercase tracking-[0.25em]">Cardholder</p>
-                            <p className="font-light tracking-[0.12em] uppercase text-sm text-gray-200 shadow-black drop-shadow-md">
-                                {cardHolder}
-                            </p>
-                        </div>
-                        <div className="flex gap-6">
-                            <div className="text-right">
-                                <p className="text-[8px] text-cyan-100/40 uppercase tracking-[0.25em]">Exp</p>
-                                <p className="font-mono font-light tracking-widest text-sm text-gray-200 shadow-black drop-shadow-md">
-                                    {expiryDate}
-                                </p>
-                            </div>
-                            <div className="text-right">
-                                <p className="text-[8px] text-cyan-100/40 uppercase tracking-[0.25em]">CVV</p>
-                                <p className="font-mono font-light tracking-widest text-sm text-gray-200 shadow-black drop-shadow-md min-w-[3ch]">
-                                    {isRevealed ? cvv : '•••'}
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
         </>
     );
 
+    const FrontContent = () => (
+        <div className="relative z-10 h-full flex flex-col justify-between p-8 select-none border border-transparent rounded-2xl bg-[#020202]">
+            <BaseCardStyles />
+            <div className="relative z-20 flex justify-between items-start">
+                <h1 className="text-xl font-light tracking-[0.4em] uppercase text-white/95 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]"
+                    style={{ fontFamily: '"Michroma", "Segoe UI", sans-serif', textShadow: '0 0 1px rgba(255,255,255,0.5)' }}
+                >
+                    PRIME
+                </h1>
+                <div className="flex gap-4">
+                    <Wifi className="w-6 h-6 text-cyan-500 rotate-90 drop-shadow-[0_0_5px_rgba(0,255,255,0.8)] opacity-90" />
+                    <Button
+                        size="icon"
+                        variant="ghost"
+                        className="w-6 h-6 rounded-full hover:bg-white/10 text-white/50 hover:text-white"
+                        onClick={() => setIsFlipped(true)}
+                        title="Flip Card"
+                    >
+                        <RefreshCw className="w-4 h-4" />
+                    </Button>
+                </div>
+            </div>
+
+            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 flex items-center justify-center pointer-events-none perspective-500 z-10">
+                <div className="absolute inset-0 bg-cyan-500 blur-[40px] opacity-20" />
+                <div className="w-16 h-12 rounded-lg bg-black/80 relative border border-cyan-400/60 shadow-[0_0_20px_rgba(0,255,255,0.2)] overflow-hidden flex items-center justify-center group-hover:scale-105 transition-transform duration-500">
+                    <div className="absolute inset-0 bg-gradient-to-b from-transparent via-cyan-400/30 to-transparent h-[200%] w-full animate-scan-fast pointer-events-none" />
+                </div>
+            </div>
+
+            <div className="relative z-20 flex flex-col gap-5 mt-auto">
+                <div className="flex items-center justify-between">
+                    <p
+                        className="text-2xl tracking-[0.14em] text-cyan-50 font-light mix-blend-screen"
+                        style={{ fontFamily: 'Consolas, monospace', textShadow: '0 0 8px rgba(0, 200, 255, 0.3)' }}
+                    >
+                        {isRevealed ? (cardNumber.match(/.{1,4}/g)?.join(' ') || cardNumber) : maskCardNumber(cardNumber)}
+                    </p>
+                    <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 text-cyan-400/40 hover:text-cyan-200 hover:bg-cyan-900/10 rounded-full"
+                        onClick={() => isRevealed ? setIsRevealed(false) : setShowPasswordModal(true)}
+                    >
+                        {isRevealed ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </Button>
+                </div>
+
+                <div className="flex justify-between items-end border-t border-white/5 pt-3">
+                    <div>
+                        <p className="text-[8px] text-cyan-100/40 uppercase tracking-[0.25em]">Cardholder</p>
+                        <p className="font-light tracking-[0.12em] uppercase text-sm text-gray-200 shadow-black drop-shadow-md">
+                            {cardHolder}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+
+    const BackContent = () => (
+        <div className="relative z-10 w-full h-full flex flex-col select-none rounded-2xl bg-[#020202] overflow-hidden" style={{ transform: 'rotateY(180deg)' }}>
+            <BaseCardStyles />
+            {/* Magnetic Stripe */}
+            <div className="relative z-20 w-full h-12 bg-black mt-6 shadow-[inset_0_-1px_3px_rgba(255,255,255,0.1)]" />
+
+            <div className="relative z-20 px-8 py-4 flex-1 flex flex-col">
+                <div className="flex justify-between mt-auto mb-4 items-center">
+                    <Button
+                        size="icon"
+                        variant="ghost"
+                        className="w-6 h-6 rounded-full hover:bg-white/10 text-white/50 hover:text-white"
+                        onClick={() => setIsFlipped(false)}
+                        title="Flip Card"
+                    >
+                        <RefreshCw className="w-4 h-4" />
+                    </Button>
+
+                    <div className="flex bg-white/10 p-2 rounded items-center gap-4 w-2/3 backdrop-blur-md">
+                        <div className="flex-1 italic text-right text-black/50 tracking-widest bg-white h-7 flex items-center justify-end px-2" style={{ backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(0,0,0,0.1) 2px, rgba(0,0,0,0.1) 4px)' }}>
+                            <span className="font-mono text-xs">{cardNumber.slice(-4)}</span>
+                        </div>
+                        <div className="flex items-center gap-2 pr-2">
+                            <p className="text-[10px] text-cyan-100/40 uppercase tracking-[0.2em]">CVV</p>
+                            <p className="font-mono text-sm tracking-widest text-cyan-400 font-bold bg-black/40 px-1.5 py-0.5 rounded border border-cyan-900/50 min-w-[34px] text-center">
+                                {isRevealed ? cvv : '•••'}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="flex justify-between items-center text-xs text-white/30 border-t border-white/10 pt-2 mb-2">
+                    <p>Customer Service: 1-800-000-0000</p>
+                    <p className="font-mono">EXP {expiryDate}</p>
+                </div>
+            </div>
+        </div>
+    );
+
     return (
-        <div className="scale-95 group perspective-1000">
-            {/* Main Card with 3D Tilt */}
+        <div className="group perspective-1000 w-full max-w-[400px] mx-auto">
             <motion.div
                 ref={ref}
                 onMouseMove={handleMouseMove}
                 onMouseLeave={handleMouseLeave}
-                style={{ transform }}
-                className="relative w-full aspect-[1.586/1] rounded-2xl shadow-2xl transition-all duration-200 isolate bg-[#020202] text-white z-20"
+                animate={{ rotateY: isFlipped ? 180 : 0 }}
+                transition={{ duration: 0.6, type: "spring", stiffness: 200, damping: 20 }}
+                style={{
+                    transform: useMotionTemplate`rotateX(${xSpring}deg) rotateY(calc(${ySpring}deg + ${isFlipped ? 180 : 0}deg))`,
+                    transformStyle: 'preserve-3d'
+                }}
+                className="relative w-full aspect-[1.586/1] rounded-2xl shadow-2xl z-20"
             >
-                <CardContent />
+                {/* Front face */}
+                <div className="absolute inset-0 cursor-pointer" style={{ backfaceVisibility: 'hidden' }}>
+                    <FrontContent />
+                </div>
 
-                {/* --- 4. "Depth of Field" Blur Overlay (Corners) --- */}
-                <div className="absolute inset-0 pointer-events-none rounded-2xl"
-                    style={{
-                        background: 'radial-gradient(circle at center, transparent 70%, rgba(0,0,0,0.5) 100%)',
-                    }}
-                />
+                {/* Back face */}
+                <div className="absolute inset-0 cursor-pointer" style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}>
+                    <BackContent />
+                </div>
             </motion.div>
 
-            {/* Reflection Container (The "Dark Reflective Surface") */}
-            <div className="relative w-full h-8 mt-[2px] z-10 perspective-1000">
-                <motion.div
-                    style={{ transform }}
-                    className="absolute top-0 left-0 w-full h-full opacity-30 blur-[2px] transition-all duration-200"
-                >
-                    {/* Inverted Card Content for Reflection */}
-                    <div className="w-full aspect-[1.586/1] scale-y-[-1] origin-top opacity-50 mask-image-gradient-reflection">
-                        <div className="relative w-full h-full bg-[#020202] rounded-2xl overflow-hidden">
-                            <CardContent />
-                        </div>
-                    </div>
-                </motion.div>
-                {/* Fade out mask for reflection */}
-                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#0a0a0a] to-[#0a0a0a]" />
-            </div>
+            {/* Depth of Field Blur Overlay (Corners) */}
+            <div className="absolute inset-0 pointer-events-none rounded-2xl mix-blend-overlay"
+                style={{ background: 'radial-gradient(circle at center, transparent 70%, rgba(0,0,0,0.5) 100%)' }}
+            />
 
-
-            {/* Password Verification Modal (Unchanged) */}
+            {/* Password Verification Modal */}
             <Dialog open={showPasswordModal} onOpenChange={setShowPasswordModal}>
                 <DialogContent className="sm:max-w-md bg-black border border-cyan-900/50 text-white shadow-[0_0_100px_rgba(0,100,255,0.15)]">
                     <DialogHeader>

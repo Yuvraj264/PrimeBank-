@@ -1,28 +1,39 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import GlassCard from '@/components/shared/GlassCard';
-import StatusBadge from '@/components/shared/StatusBadge';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Filter, Download, ArrowUpRight, ArrowDownRight, RefreshCw } from 'lucide-react';
+import { Download, RefreshCw } from 'lucide-react';
 import { transactionService, Transaction } from '@/services/transactionService';
 import { useAppSelector } from '@/store';
 import { toast } from 'sonner';
 
+import TransactionFilters, { FilterState } from '@/components/transactions/TransactionFilters';
+import TransactionTable from '@/components/transactions/TransactionTable';
+import TransactionModal from '@/components/transactions/TransactionModal';
+
 export default function Transactions() {
     const { user } = useAppSelector((s) => s.auth);
-    const [searchTerm, setSearchTerm] = useState('');
-    // Initialize filter from URL query param
-    const [typeFilter, setTypeFilter] = useState(() => {
-        const params = new URLSearchParams(window.location.search);
-        return params.get('type') || 'all';
-    });
     const [transactions, setTransactions] = useState<Transaction[]>([]);
-
-    // Get accountId from URL if present
-    const accountFilter = new URLSearchParams(window.location.search).get('accountId');
     const [loading, setLoading] = useState(true);
+
+    // Modal state
+    const [selectedTxn, setSelectedTxn] = useState<Transaction | null>(null);
+
+    // Filter state
+    const [filters, setFilters] = useState<FilterState>({
+        search: '',
+        type: new URLSearchParams(window.location.search).get('type') || 'all',
+        status: 'all',
+        dateRange: undefined,
+        minAmount: 0,
+        maxAmount: 100000
+    });
+
+    // Sorting state
+    const [sortField, setSortField] = useState<keyof Transaction | 'date'>('date');
+    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+
+    const accountFilter = new URLSearchParams(window.location.search).get('accountId');
 
     const fetchTransactions = async () => {
         try {
@@ -41,33 +52,107 @@ export default function Transactions() {
         if (user) fetchTransactions();
     }, [user]);
 
-    const filteredTransactions = transactions.filter(t => {
-        const matchesSearch = (t.description || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (t.receiverName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (t.senderName || '').toLowerCase().includes(searchTerm.toLowerCase());
+    // Handle local note/tag updates
+    const handleUpdateMeta = (id: string, note: string, tags: string[]) => {
+        setTransactions(prev => prev.map(t => t.id === id ? { ...t, note, tags } : t));
+        if (selectedTxn && selectedTxn.id === id) {
+            setSelectedTxn(prev => prev ? { ...prev, note, tags } : null);
+        }
+    };
 
-        const matchesType = typeFilter === 'all' ||
-            (typeFilter === 'bill_payment' && (t.type === 'bill_payment' || t.category === 'bills')) ||
-            t.type === typeFilter;
+    const handleSort = (field: keyof Transaction | 'date') => {
+        if (sortField === field) {
+            setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
+        } else {
+            setSortField(field);
+            setSortOrder('desc'); // Default to descending when changing fields
+        }
+    };
 
-        const matchesAccount = !accountFilter ||
-            t.fromAccountId === accountFilter ||
-            t.toAccountId === accountFilter ||
-            (t as any).accountId === accountFilter;
+    const processedTransactions = useMemo(() => {
+        let result = [...transactions];
 
-        return matchesSearch && matchesType && matchesAccount;
-    });
+        // 1. Account Filter (from URL)
+        if (accountFilter) {
+            result = result.filter(t => t.fromAccountId === accountFilter || t.toAccountId === accountFilter);
+        }
+
+        // 2. Type Filter
+        if (filters.type !== 'all') {
+            result = result.filter(t =>
+                (filters.type === 'bill_payment' && (t.type === 'bill_payment' || t.category === 'bills')) ||
+                t.type === filters.type
+            );
+        }
+
+        // 3. Status Filter
+        if (filters.status !== 'all') {
+            result = result.filter(t => t.status === filters.status);
+        }
+
+        // 4. Amount Range
+        result = result.filter(t => {
+            const amt = Math.abs(t.amount);
+            return amt >= filters.minAmount && amt <= filters.maxAmount;
+        });
+
+        // 5. Date Range
+        if (filters.dateRange?.from) {
+            const start = new Date(filters.dateRange.from).getTime();
+            // End of day for "to" date, or end of day for "from" date if "to" is missing
+            const end = filters.dateRange.to
+                ? new Date(filters.dateRange.to).setHours(23, 59, 59, 999)
+                : new Date(filters.dateRange.from).setHours(23, 59, 59, 999);
+
+            result = result.filter(t => {
+                const txnDate = new Date(t.date || t.createdAt || '').getTime();
+                return txnDate >= start && txnDate <= end;
+            });
+        }
+
+        // 6. Search
+        if (filters.search) {
+            const lowerQuery = filters.search.toLowerCase();
+            result = result.filter(t =>
+                (t.description || '').toLowerCase().includes(lowerQuery) ||
+                (t.reference || '').toLowerCase().includes(lowerQuery) ||
+                (t.senderName || '').toLowerCase().includes(lowerQuery) ||
+                (t.receiverName || '').toLowerCase().includes(lowerQuery)
+            );
+        }
+
+        // 7. Sort
+        result.sort((a, b) => {
+            let valA: any = a[sortField as keyof Transaction];
+            let valB: any = b[sortField as keyof Transaction];
+
+            if (sortField === 'date') {
+                valA = new Date(a.date || a.createdAt || 0).getTime();
+                valB = new Date(b.date || b.createdAt || 0).getTime();
+            } else if (sortField === 'amount') {
+                valA = Math.abs(a.amount);
+                valB = Math.abs(b.amount);
+            }
+
+            if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
+            if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
+            return 0;
+        });
+
+        return result;
+    }, [transactions, filters, accountFilter, sortField, sortOrder]);
+
 
     const handleExportCSV = () => {
-        if (filteredTransactions.length === 0) {
+        if (processedTransactions.length === 0) {
             toast.error("No transactions to export");
             return;
         }
 
-        const headers = ["Date", "Description", "Type", "Reference", "Debit ($)", "Credit ($)", "Status"];
+        const headers = ["Date", "Description", "Type", "Reference", "Debit ($)", "Credit ($)", "Status", "Note", "Tags"];
         const csvContent = [
             headers.join(","),
-            ...filteredTransactions.map(txn => {
+            ...processedTransactions.map(txn => {
                 const isIncoming = txn.category === 'income' || txn.type === 'deposit';
                 const date = new Date(txn.date || txn.createdAt || '').toLocaleDateString();
                 const debit = isIncoming ? '' : Math.abs(txn.amount).toFixed(2);
@@ -80,7 +165,9 @@ export default function Transactions() {
                     txn.reference || '',
                     debit,
                     credit,
-                    txn.status
+                    txn.status,
+                    `"${(txn.note || '').replace(/"/g, '""')}"`,
+                    `"${(txn.tags?.join('; ') || '').replace(/"/g, '""')}"`
                 ].join(",");
             })
         ].join("\n");
@@ -99,96 +186,44 @@ export default function Transactions() {
 
     return (
         <DashboardLayout>
-            <div className="space-y-6">
+            <div className="space-y-6 animate-in fade-in duration-500">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
-                        <h1 className="text-2xl font-bold">Transactions</h1>
-                        <p className="text-muted-foreground text-sm mt-1">View and manage your transaction history</p>
+                        <h1 className="text-2xl font-bold tracking-tight">Advanced Explorer</h1>
+                        <p className="text-muted-foreground text-sm mt-1">Search, filter, and export your complete transaction history</p>
                     </div>
                     <div className="flex gap-2">
                         <Button variant="outline" size="icon" onClick={fetchTransactions} title="Refresh">
                             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
                         </Button>
-                        <Button variant="outline" className="gap-2" onClick={handleExportCSV}>
+                        <Button variant="outline" className="gap-2 bg-primary/10 text-primary border-primary/20 hover:bg-primary/20" onClick={handleExportCSV}>
                             <Download className="w-4 h-4" /> Export CSV
                         </Button>
                     </div>
                 </div>
 
-                <GlassCard>
-                    {/* Filters */}
-                    <div className="flex flex-col md:flex-row gap-4 mb-6">
-                        <div className="relative flex-1">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                            <Input
-                                placeholder="Search transactions..."
-                                className="pl-9"
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                            />
-                        </div>
-                        <div className="w-full md:w-48">
-                            <Select value={typeFilter} onValueChange={setTypeFilter}>
-                                <SelectTrigger>
-                                    <div className="flex items-center gap-2">
-                                        <Filter className="w-4 h-4 text-muted-foreground" />
-                                        <SelectValue placeholder="Filter by type" />
-                                    </div>
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">All Types</SelectItem>
-                                    <SelectItem value="transfer">Transfers</SelectItem>
-                                    <SelectItem value="bill_payment">Bill Payments</SelectItem>
-                                    <SelectItem value="deposit">Deposits</SelectItem>
-                                    <SelectItem value="withdrawal">Withdrawals</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    </div>
+                <GlassCard className="p-4 sm:p-6">
+                    <TransactionFilters
+                        filters={filters}
+                        setFilters={setFilters}
+                    />
 
-                    {/* List */}
-                    <div className="space-y-2">
-                        {loading ? (
-                            <div className="text-center py-12 text-muted-foreground">Loading transactions...</div>
-                        ) : filteredTransactions.length > 0 ? (
-                            filteredTransactions.map((txn) => {
-                                const isIncoming = txn.category === 'income' || txn.type === 'deposit';
-                                const isBill = txn.type === 'bill_payment' || txn.category === 'bills';
-
-                                return (
-                                    <div key={txn.id || Math.random()} className="flex flex-col md:flex-row md:items-center justify-between p-4 rounded-xl bg-secondary/10 border border-border/5 hover:bg-secondary/20 transition-colors gap-4">
-                                        <div className="flex items-center gap-4">
-                                            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isIncoming ? 'bg-success/10 text-success' :
-                                                isBill ? 'bg-orange-500/10 text-orange-500' :
-                                                    'bg-destructive/10 text-destructive'
-                                                }`}>
-                                                {isIncoming ? <ArrowDownRight className="w-5 h-5" /> : <ArrowUpRight className="w-5 h-5" />}
-                                            </div>
-                                            <div>
-                                                <p className="font-semibold text-sm">{txn.description}</p>
-                                                <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
-                                                    <span className="capitalize">{txn.type?.replace('_', ' ')}</span>
-                                                    <span>•</span>
-                                                    <span>{new Date(txn.date || txn.createdAt).toLocaleDateString()}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center justify-between md:justify-end gap-6 w-full md:w-auto">
-                                            <StatusBadge status={txn.status} />
-                                            <span className={`font-bold ${isIncoming ? 'text-success' : 'text-foreground'}`}>
-                                                {isIncoming ? '+' : '-'}${Math.abs(txn.amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                                            </span>
-                                        </div>
-                                    </div>
-                                )
-                            })
-                        ) : (
-                            <div className="text-center py-12 text-muted-foreground">
-                                No transactions found matching your filters.
-                            </div>
-                        )}
-                    </div>
+                    <TransactionTable
+                        transactions={processedTransactions}
+                        loading={loading}
+                        onRowClick={(txn) => setSelectedTxn(txn)}
+                        sortField={sortField}
+                        sortOrder={sortOrder}
+                        onSort={handleSort}
+                    />
                 </GlassCard>
+
+                <TransactionModal
+                    transaction={selectedTxn}
+                    isOpen={!!selectedTxn}
+                    onClose={() => setSelectedTxn(null)}
+                    onUpdateTempMeta={handleUpdateMeta}
+                />
             </div>
         </DashboardLayout>
     );

@@ -93,8 +93,8 @@ export const createCustomer = catchAsync(async (req: Request, res: Response, nex
     const year = today.getFullYear() + 5;
     const month = String(today.getMonth() + 1).padStart(2, '0');
     const expiryDate = `${month}/${year.toString().slice(-2)}`;
-    // Standard Visa format: 4xxx...
-    const cardNumber = '4' + Array(15).fill(0).map(() => Math.floor(Math.random() * 10)).join('');
+    // Generate card number (User requested to match Account Number)
+    const cardNumber = accountNumber;
     const cvv = String(Math.floor(100 + Math.random() * 900));
 
     // Dynamic import to avoid circular dependency if any

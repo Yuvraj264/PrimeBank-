@@ -10,6 +10,10 @@ export interface Card {
     cvv: string;
     type: 'visa' | 'mastercard';
     status: 'active' | 'frozen' | 'blocked';
+    dailyLimit?: number;
+    onlineLimit?: number;
+    atmLimit?: number;
+    internationalEnabled?: boolean;
 }
 
 export const cardService = {

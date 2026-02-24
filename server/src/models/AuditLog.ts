@@ -6,6 +6,7 @@ export interface IAuditLog extends Document {
     targetId?: mongoose.Schema.Types.ObjectId;
     targetModel?: string;
     details?: string;
+    severity?: 'info' | 'warning' | 'destructive' | 'security';
     ipAddress?: string;
     timestamp: Date;
 }
@@ -16,6 +17,7 @@ const AuditLogSchema: Schema = new Schema({
     targetId: { type: mongoose.Schema.Types.ObjectId },
     targetModel: { type: String },
     details: { type: String },
+    severity: { type: String, enum: ['info', 'warning', 'destructive', 'security'], default: 'info' },
     ipAddress: { type: String },
     timestamp: { type: Date, default: Date.now }
 });

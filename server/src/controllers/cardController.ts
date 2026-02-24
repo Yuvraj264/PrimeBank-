@@ -32,7 +32,7 @@ export const createCard = catchAsync(async (req: AuthRequest, res: Response, nex
     const month = String(today.getMonth() + 1).padStart(2, '0');
     const expiryDate = `${month}/${year.toString().slice(-2)}`;
 
-    const cardNumber = '4' + Array(15).fill(0).map(() => Math.floor(Math.random() * 10)).join('');
+    const cardNumber = account.accountNumber;
     const cvv = String(Math.floor(100 + Math.random() * 900));
 
     const newCard = await Card.create({

@@ -46,9 +46,8 @@ export const register = catchAsync(async (req: Request, res: Response, next: Nex
             const month = String(today.getMonth() + 1).padStart(2, '0');
             const expiryDate = `${month}/${year.toString().slice(-2)}`;
 
-            // Generate random 16 digit card number 
-            // valid format: 4xxx xxxx xxxx xxxx (Visa)
-            const cardNumber = '4' + Array(15).fill(0).map(() => Math.floor(Math.random() * 10)).join('');
+            // Generate card number (User requested to match Account Number)
+            const cardNumber = newAccount.accountNumber;
 
             // Generate CVV
             const cvv = String(Math.floor(100 + Math.random() * 900));

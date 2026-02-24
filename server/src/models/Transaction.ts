@@ -14,6 +14,8 @@ export interface ITransaction extends Document {
     description?: string;
     date: Date;
     category?: 'income' | 'expense' | 'bills' | 'shopping' | 'transfer';
+    isFlagged?: boolean;
+    riskScore?: number;
 }
 
 const TransactionSchema: Schema = new Schema({
@@ -37,7 +39,9 @@ const TransactionSchema: Schema = new Schema({
     reference: { type: String },
     description: { type: String },
     date: { type: Date, default: Date.now },
-    category: { type: String, enum: ['income', 'expense', 'bills', 'shopping', 'transfer'] }
+    category: { type: String, enum: ['income', 'expense', 'bills', 'shopping', 'transfer'] },
+    isFlagged: { type: Boolean, default: false },
+    riskScore: { type: Number, default: 0 }
 }, {
     timestamps: true,
     toJSON: {
