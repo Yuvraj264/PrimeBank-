@@ -8,7 +8,7 @@ import {
   LayoutDashboard, ArrowLeftRight, Receipt, Users, FileText, Shield,
   Settings, LogOut, ChevronLeft, ChevronRight, Landmark, UserCheck,
   ClipboardList, AlertTriangle, Activity, CreditCard, UserPlus,
-  History, Smartphone, Menu, X, Bell
+  History, Smartphone, Menu, X, Bell, PieChart
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -27,6 +27,7 @@ const getNavItems = (role: UserRole): NavItem[] => {
         { label: 'Transfers', path: '/customer/transfers', icon: ArrowLeftRight },
         { label: 'Bill Payments', path: '/customer/bills', icon: CreditCard },
         { label: 'Loans', path: '/customer/loans', icon: Landmark },
+        { label: 'Investments', path: '/customer/investments', icon: PieChart },
         { label: 'Transactions', path: '/customer/transactions', icon: Receipt },
         { label: 'My Cards', path: '/customer/cards', icon: CreditCard },
         { label: 'Beneficiaries', path: '/customer/beneficiaries', icon: Users },
