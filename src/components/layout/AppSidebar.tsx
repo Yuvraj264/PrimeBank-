@@ -8,7 +8,7 @@ import {
   LayoutDashboard, ArrowLeftRight, Receipt, Users, FileText, Shield,
   Settings, LogOut, ChevronLeft, ChevronRight, Landmark, UserCheck,
   ClipboardList, AlertTriangle, Activity, CreditCard, UserPlus,
-  History, Smartphone, Menu, X, Bell, PieChart
+  History, Smartphone, Menu, X, Bell, PieChart, LifeBuoy
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -35,6 +35,7 @@ const getNavItems = (role: UserRole): NavItem[] => {
         { label: 'Statements', path: '/customer/statements', icon: FileText },
         { label: 'My Profile', path: '/customer/profile', icon: UserCheck },
         { label: 'Security', path: '/customer/security', icon: Shield },
+        { label: 'Help & Support', path: '/customer/support', icon: LifeBuoy },
       ];
     case 'employee':
       return [
