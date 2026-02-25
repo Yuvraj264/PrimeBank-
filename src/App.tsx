@@ -26,6 +26,7 @@ import Loans from './pages/customer/Loans';
 import Investments from './pages/customer/Investments';
 import Notifications from './pages/customer/Notifications';
 import Support from './pages/customer/Support';
+import Settings from './pages/customer/Settings';
 import Customers from './pages/employee/Customers';
 import CustomerDetails from './pages/employee/CustomerDetails';
 import KYCVerification from './pages/employee/KYCVerification';
@@ -129,6 +130,11 @@ const App = () => (
             <Route path="/customer/support" element={
               <ProtectedRoute allowedRoles={['customer']}>
                 <Support />
+              </ProtectedRoute>
+            } />
+            <Route path="/customer/settings" element={
+              <ProtectedRoute allowedRoles={['customer']}>
+                <Settings />
               </ProtectedRoute>
             } />
 

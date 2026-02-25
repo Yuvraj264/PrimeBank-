@@ -36,6 +36,7 @@ const getNavItems = (role: UserRole): NavItem[] => {
         { label: 'My Profile', path: '/customer/profile', icon: UserCheck },
         { label: 'Security', path: '/customer/security', icon: Shield },
         { label: 'Help & Support', path: '/customer/support', icon: LifeBuoy },
+        { label: 'Settings', path: '/customer/settings', icon: Settings },
       ];
     case 'employee':
       return [
