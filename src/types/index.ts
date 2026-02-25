@@ -114,7 +114,7 @@ export interface Loan {
 }
 
 export interface Beneficiary {
-  id: string;
+  _id: string;
   userId: string;
   name: string;
   accountNumber: string;
@@ -122,6 +122,12 @@ export interface Beneficiary {
   ifscCode: string;
   status: 'approved' | 'pending' | 'rejected';
   addedAt: string;
+  createdAt: string;
+  isFavorite: boolean;
+  dailyLimit: number;
+  nickname?: string;
+  type?: 'domestic' | 'international';
+  avatar?: string;
 }
 
 export interface KYCDocument {

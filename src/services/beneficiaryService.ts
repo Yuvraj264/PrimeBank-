@@ -7,8 +7,13 @@ export const beneficiaryService = {
         return response.data.data;
     },
 
-    addBeneficiary: async (data: { name: string; accountNumber: string; bankName: string; ifscCode: string }) => {
+    addBeneficiary: async (data: { name: string; accountNumber: string; bankName: string; ifscCode: string; nickname?: string; isFavorite?: boolean; dailyLimit?: number }) => {
         const response = await api.post<{ status: string; data: Beneficiary }>('/beneficiaries', data);
+        return response.data.data;
+    },
+
+    updateBeneficiary: async (id: string, data: Partial<Beneficiary>) => {
+        const response = await api.patch<{ status: string; data: Beneficiary }>(`/beneficiaries/${id}`, data);
         return response.data.data;
     },
 

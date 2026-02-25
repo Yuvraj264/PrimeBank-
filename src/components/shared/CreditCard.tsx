@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion, useMotionTemplate, useMotionValue, useSpring, AnimatePresence } from 'framer-motion';
 import { Wifi, Eye, EyeOff, Loader2, Cpu, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
@@ -36,6 +36,11 @@ export default function CreditCard({
     const [password, setPassword] = useState('');
     const [verifying, setVerifying] = useState(false);
     const [isFlipped, setIsFlipped] = useState(false); // Controls 3D flipping
+    const flipMotion = useSpring(0, { stiffness: 200, damping: 20 });
+
+    useEffect(() => {
+        flipMotion.set(isFlipped ? 180 : 0);
+    }, [isFlipped, flipMotion]);
 
     // Mouse tilt effect
     const ref = useRef<HTMLDivElement>(null);
@@ -43,7 +48,7 @@ export default function CreditCard({
     const y = useMotionValue(0);
     const xSpring = useSpring(x);
     const ySpring = useSpring(y);
-    const transform = useMotionTemplate`rotateX(${xSpring}deg) rotateY(${ySpring}deg)`;
+    const computedTransform = useMotionTemplate`rotateX(${xSpring}deg) rotateY(calc(${ySpring}deg + ${flipMotion}deg))`;
 
     const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
         if (!ref.current) return;
@@ -86,6 +91,12 @@ export default function CreditCard({
             setVerifying(false);
         }
     };
+
+    const normalizedCardNumber = cardNumber.length >= 16
+        ? cardNumber.slice(0, 16)
+        : cardNumber.length > 4
+            ? cardNumber.slice(0, cardNumber.length - 4).padEnd(12, '0') + cardNumber.slice(-4)
+            : cardNumber.padEnd(16, '0');
 
     const maskCardNumber = (num: string) => {
         if (isRevealed) return num.match(/.{1,4}/g)?.join(' ') || num;
@@ -150,7 +161,7 @@ export default function CreditCard({
                         className="text-2xl tracking-[0.14em] text-cyan-50 font-light mix-blend-screen"
                         style={{ fontFamily: 'Consolas, monospace', textShadow: '0 0 8px rgba(0, 200, 255, 0.3)' }}
                     >
-                        {isRevealed ? (cardNumber.match(/.{1,4}/g)?.join(' ') || cardNumber) : maskCardNumber(cardNumber)}
+                        {isRevealed ? (normalizedCardNumber.match(/.{1,4}/g)?.join(' ') || normalizedCardNumber) : maskCardNumber(normalizedCardNumber)}
                     </p>
                     <Button
                         size="icon"
@@ -175,7 +186,7 @@ export default function CreditCard({
     );
 
     const BackContent = () => (
-        <div className="relative z-10 w-full h-full flex flex-col select-none rounded-2xl bg-[#020202] overflow-hidden" style={{ transform: 'rotateY(180deg)' }}>
+        <div className="relative z-10 w-full h-full flex flex-col select-none rounded-2xl bg-[#020202] overflow-hidden">
             <BaseCardStyles />
             {/* Magnetic Stripe */}
             <div className="relative z-20 w-full h-12 bg-black mt-6 shadow-[inset_0_-1px_3px_rgba(255,255,255,0.1)]" />
@@ -194,7 +205,7 @@ export default function CreditCard({
 
                     <div className="flex bg-white/10 p-2 rounded items-center gap-4 w-2/3 backdrop-blur-md">
                         <div className="flex-1 italic text-right text-black/50 tracking-widest bg-white h-7 flex items-center justify-end px-2" style={{ backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(0,0,0,0.1) 2px, rgba(0,0,0,0.1) 4px)' }}>
-                            <span className="font-mono text-xs">{cardNumber.slice(-4)}</span>
+                            <span className="font-mono text-xs">{normalizedCardNumber.slice(-4)}</span>
                         </div>
                         <div className="flex items-center gap-2 pr-2">
                             <p className="text-[10px] text-cyan-100/40 uppercase tracking-[0.2em]">CVV</p>
@@ -214,26 +225,41 @@ export default function CreditCard({
     );
 
     return (
-        <div className="group perspective-1000 w-full max-w-[400px] mx-auto">
+        <div className="group perspective-1000 w-full max-w-[500px] mx-auto">
             <motion.div
                 ref={ref}
                 onMouseMove={handleMouseMove}
                 onMouseLeave={handleMouseLeave}
-                animate={{ rotateY: isFlipped ? 180 : 0 }}
-                transition={{ duration: 0.6, type: "spring", stiffness: 200, damping: 20 }}
                 style={{
-                    transform: useMotionTemplate`rotateX(${xSpring}deg) rotateY(calc(${ySpring}deg + ${isFlipped ? 180 : 0}deg))`,
+                    transform: computedTransform,
                     transformStyle: 'preserve-3d'
                 }}
                 className="relative w-full aspect-[1.586/1] rounded-2xl shadow-2xl z-20"
             >
                 {/* Front face */}
-                <div className="absolute inset-0 cursor-pointer" style={{ backfaceVisibility: 'hidden' }}>
+                <div
+                    className="absolute inset-0"
+                    style={{
+                        backfaceVisibility: 'hidden',
+                        WebkitBackfaceVisibility: 'hidden',
+                        zIndex: isFlipped ? 0 : 10,
+                        pointerEvents: isFlipped ? 'none' : 'auto'
+                    }}
+                >
                     <FrontContent />
                 </div>
 
                 {/* Back face */}
-                <div className="absolute inset-0 cursor-pointer" style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}>
+                <div
+                    className="absolute inset-0"
+                    style={{
+                        backfaceVisibility: 'hidden',
+                        WebkitBackfaceVisibility: 'hidden',
+                        transform: 'rotateY(180deg)',
+                        zIndex: isFlipped ? 10 : 0,
+                        pointerEvents: isFlipped ? 'auto' : 'none'
+                    }}
+                >
                     <BackContent />
                 </div>
             </motion.div>

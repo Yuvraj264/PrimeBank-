@@ -90,9 +90,9 @@ export default function CardsAndAccounts() {
                     </Button>
                 </div>
 
-                <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 xl:gap-8">
                     {/* Left Column: Interactive Cards & Bills */}
-                    <div className="xl:col-span-1 space-y-6">
+                    <div className="xl:col-span-5 space-y-6">
 
                         <div className="bg-card/40 border border-border/50 rounded-3xl p-4 overflow-hidden shadow-2xl relative">
                             {/* Ambient reflection */}
@@ -127,7 +127,7 @@ export default function CardsAndAccounts() {
                     </div>
 
                     {/* Middle & Right Column: Controls & History */}
-                    <div className="xl:col-span-2 space-y-6">
+                    <div className="xl:col-span-7 space-y-6">
                         {activeCardData ? (
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                 {/* Configuration Panel */}
@@ -158,16 +158,16 @@ export default function CardsAndAccounts() {
                                                 const isIncoming = txn.category === 'income' || txn.type === 'deposit';
                                                 return (
                                                     <div key={txn.id + i} className="flex items-center justify-between p-3 rounded-xl hover:bg-secondary/20 transition-colors">
-                                                        <div className="flex items-center gap-3">
-                                                            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${isIncoming ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'}`}>
+                                                        <div className="flex items-center gap-3 flex-1 min-w-0 pr-4">
+                                                            <div className={`w-8 h-8 rounded-full shrink-0 flex items-center justify-center ${isIncoming ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'}`}>
                                                                 {isIncoming ? <ArrowDownRight className="w-4 h-4" /> : <ArrowUpRight className="w-4 h-4" />}
                                                             </div>
-                                                            <div>
-                                                                <p className="font-medium text-sm sm:w-[150px] truncate">{txn.description}</p>
-                                                                <p className="text-xs text-muted-foreground">{new Date(txn.date || txn.createdAt || '').toLocaleDateString()}</p>
+                                                            <div className="min-w-0">
+                                                                <p className="font-medium text-sm truncate">{txn.description}</p>
+                                                                <p className="text-xs text-muted-foreground truncate">{new Date(txn.date || txn.createdAt || '').toLocaleDateString()}</p>
                                                             </div>
                                                         </div>
-                                                        <div className="font-semibold tabular-nums text-sm">
+                                                        <div className="font-semibold tabular-nums text-sm shrink-0 text-right">
                                                             {isIncoming ? '+' : '-'}${Math.abs(txn.amount).toFixed(2)}
                                                         </div>
                                                     </div>

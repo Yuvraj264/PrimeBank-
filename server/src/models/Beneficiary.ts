@@ -10,6 +10,8 @@ export interface IBeneficiary extends Document {
     type: 'domestic' | 'international';
     avatar?: string;
     nickname?: string;
+    isFavorite: boolean;
+    dailyLimit: number;
 }
 
 const BeneficiarySchema: Schema = new Schema({
@@ -21,7 +23,9 @@ const BeneficiarySchema: Schema = new Schema({
     swiftCode: { type: String },
     type: { type: String, enum: ['domestic', 'international'], default: 'domestic' },
     avatar: { type: String },
-    nickname: { type: String }
+    nickname: { type: String },
+    isFavorite: { type: Boolean, default: false },
+    dailyLimit: { type: Number, default: 50000 }
 }, { timestamps: true });
 
 // Prevent duplicate beneficiaries for the same user with the same account number

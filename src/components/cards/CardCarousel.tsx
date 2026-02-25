@@ -62,7 +62,7 @@ export default function CardCarousel({ cards, activeCardId, onActiveCardChange, 
     };
 
     return (
-        <div className="relative w-full max-w-[450px] mx-auto py-6">
+        <div className="relative w-full max-w-[500px] mx-auto py-6">
             <div className="flex justify-between items-center mb-6 px-4">
                 <Button
                     variant="outline"
@@ -92,7 +92,7 @@ export default function CardCarousel({ cards, activeCardId, onActiveCardChange, 
                 </Button>
             </div>
 
-            <div className="relative h-[250px] flex justify-center items-center overflow-hidden [perspective:1000px]">
+            <div className="relative h-[320px] flex justify-center items-center overflow-hidden [perspective:1000px]">
                 <AnimatePresence initial={false} custom={direction}>
                     <motion.div
                         key={activeCard.id}

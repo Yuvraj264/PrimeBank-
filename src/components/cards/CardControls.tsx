@@ -60,28 +60,28 @@ export default function CardControls({ card, onUpdateCard, onRequestReplacement,
     return (
         <div className="space-y-6">
             {/* Primary Toggles */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4">
                 <GlassCard className={`p-4 flex items-center justify-between transition-colors ${isFrozen ? 'bg-destructive/10 border-destructive/30' : ''}`}>
-                    <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-full ${isFrozen ? 'bg-destructive/20 text-destructive' : 'bg-primary/10 text-primary'}`}>
+                    <div className="flex items-center gap-3 flex-1 min-w-0 pr-4">
+                        <div className={`p-2 rounded-full shrink-0 ${isFrozen ? 'bg-destructive/20 text-destructive' : 'bg-primary/10 text-primary'}`}>
                             {isFrozen ? <Lock className="w-5 h-5" /> : <Unlock className="w-5 h-5" />}
                         </div>
-                        <div>
-                            <p className="font-semibold">{isFrozen ? 'Card Frozen' : 'Freeze Card'}</p>
-                            <p className="text-xs text-muted-foreground">Temporarily block transactions</p>
+                        <div className="min-w-0">
+                            <p className="font-semibold truncate">{isFrozen ? 'Card Frozen' : 'Freeze Card'}</p>
+                            <p className="text-xs text-muted-foreground truncate">Temporarily block transactions</p>
                         </div>
                     </div>
                     <Switch checked={isFrozen} onCheckedChange={handleToggleFreeze} />
                 </GlassCard>
 
                 <GlassCard className="p-4 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-full bg-blue-500/10 text-blue-500">
+                    <div className="flex items-center gap-3 flex-1 min-w-0 pr-4">
+                        <div className="p-2 rounded-full bg-blue-500/10 text-blue-500 shrink-0">
                             <Globe className="w-5 h-5" />
                         </div>
-                        <div>
-                            <p className="font-semibold">International</p>
-                            <p className="text-xs text-muted-foreground">Enable foreign transactions</p>
+                        <div className="min-w-0">
+                            <p className="font-semibold truncate">International</p>
+                            <p className="text-xs text-muted-foreground truncate">Enable foreign transactions</p>
                         </div>
                     </div>
                     <Switch

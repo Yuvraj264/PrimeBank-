@@ -9,7 +9,7 @@ interface AuthRequest extends Request {
 }
 
 export const addBeneficiary = catchAsync(async (req: AuthRequest, res: Response, next: NextFunction) => {
-    const { name, accountNumber, bankName, ifscCode, type, nickname } = req.body;
+    const { name, accountNumber, bankName, ifscCode, type, nickname, isFavorite, dailyLimit } = req.body;
     const userId = req.user!._id;
 
     // Check if beneficiary already exists
@@ -25,7 +25,9 @@ export const addBeneficiary = catchAsync(async (req: AuthRequest, res: Response,
         bankName,
         ifscCode,
         type,
-        nickname
+        nickname,
+        isFavorite: isFavorite || false,
+        dailyLimit: dailyLimit || 50000
     });
 
     res.status(201).json({ status: 'success', data: beneficiary });
@@ -47,4 +49,30 @@ export const deleteBeneficiary = catchAsync(async (req: AuthRequest, res: Respon
     }
 
     res.status(204).json({ status: 'success', data: null });
+});
+
+export const updateBeneficiary = catchAsync(async (req: AuthRequest, res: Response, next: NextFunction) => {
+    const { id } = req.params;
+    const userId = req.user!._id;
+
+    // We only allow updating specific non-critical fields for security
+    const { nickname, isFavorite, dailyLimit } = req.body;
+
+    const beneficiary = await Beneficiary.findOneAndUpdate(
+        { _id: id, userId: userId as any },
+        {
+            $set: {
+                ...(nickname !== undefined && { nickname }),
+                ...(isFavorite !== undefined && { isFavorite }),
+                ...(dailyLimit !== undefined && { dailyLimit })
+            }
+        },
+        { new: true, runValidators: true }
+    );
+
+    if (!beneficiary) {
+        return next(new AppError('Beneficiary not found', 404));
+    }
+
+    res.status(200).json({ status: 'success', data: beneficiary });
 });
