@@ -25,6 +25,22 @@ export const getAllLoans = catchAsync(async (req: AuthRequest, res: Response, ne
     res.status(200).json({ status: 'success', data: loans });
 });
 
+export const prepayLoan = catchAsync(async (req: AuthRequest, res: Response, next: NextFunction) => {
+    const userId = (req.user!._id as any).toString();
+    const { pin, ...data } = req.body;
+
+    if (!req.user!.transactionPin) {
+        return next(new AppError('Please set a Transaction PIN before making payments', 400));
+    }
+
+    if (!pin || !(await req.user!.matchTransactionPin(String(pin)))) {
+        return next(new AppError('Invalid or missing Transaction PIN', 401));
+    }
+
+    const loan = await loanService.prepayLoan(userId, data);
+    res.status(200).json({ status: 'success', data: loan });
+});
+
 export const updateLoanStatus = catchAsync(async (req: AuthRequest, res: Response, next: NextFunction) => {
     const { id } = req.params;
     const { status, adminComment } = req.body;
