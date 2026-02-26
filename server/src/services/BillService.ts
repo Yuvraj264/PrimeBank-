@@ -3,6 +3,7 @@ import { accountRepository } from '../repositories/AccountRepository';
 import { transactionRepository } from '../repositories/TransactionRepository';
 import { AppError } from '../utils/appError';
 import { IBill } from '../models/Bill';
+import { notificationService } from './NotificationService';
 import mongoose from 'mongoose';
 
 export class BillService {
@@ -71,6 +72,12 @@ export class BillService {
 
             await session.commitTransaction();
             session.endSession();
+
+            await notificationService.createNotification(
+                userId,
+                'bill_paid',
+                `Successfully paid ${amount} to ${billerName}.`
+            );
 
             return newBill[0];
         } catch (error) {

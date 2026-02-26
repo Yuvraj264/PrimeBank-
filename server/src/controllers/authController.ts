@@ -3,6 +3,7 @@ import { AppError } from '../utils/appError';
 import catchAsync from '../utils/catchAsync';
 import { authService } from '../services/AuthService';
 import { auditService } from '../services/AuditService';
+import { notificationService } from '../services/NotificationService';
 
 export const register = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
     const { user, accessToken, refreshToken } = await authService.register(req.body);
@@ -36,6 +37,13 @@ export const login = catchAsync(async (req: Request, res: Response, next: NextFu
     const { user, accessToken, refreshToken } = await authService.login(email, password);
 
     await auditService.logLogin(String(user._id), req.ip || 'unknown');
+
+    // Add non-blocking login notification
+    notificationService.createNotification(
+        String(user._id),
+        'security_alert',
+        `New login detected from IP: ${req.ip || 'unknown'}`
+    ).catch(err => console.error('Silent Notification Error:', err));
 
     res.cookie('refreshToken', refreshToken, {
         httpOnly: true,
@@ -142,5 +150,28 @@ export const verifyPassword = catchAsync(async (req: Request, res: Response, nex
     res.status(200).json({
         status: 'success',
         message: 'Password verified'
+    });
+});
+
+export const updatePreferences = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
+    const userId = (req as any).user.id;
+    const user = await authService.updatePreferences(userId, req.body);
+
+    res.status(200).json({
+        status: 'success',
+        data: user.preferences
+    });
+});
+
+export const requestAccountClosure = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
+    const userId = (req as any).user.id;
+    const { reason } = req.body;
+
+    // We optionally take a reason
+    const user = await authService.requestAccountClosure(userId, reason || 'User requested');
+
+    res.status(200).json({
+        status: 'success',
+        message: 'Account closure requested successfully. Our team will process this shortly.'
     });
 });

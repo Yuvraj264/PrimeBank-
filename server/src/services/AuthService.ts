@@ -169,6 +169,25 @@ export class AuthService {
 
         return updatedUser;
     }
+
+    async updatePreferences(userId: string, preferences: any): Promise<IUser> {
+        const user = await userRepository.findById(userId);
+        if (!user) throw new AppError('User not found', 404);
+
+        user.preferences = { ...user.preferences, ...preferences };
+        await user.save();
+        return user;
+    }
+
+    async requestAccountClosure(userId: string, reason: string): Promise<IUser> {
+        const user = await userRepository.findById(userId);
+        if (!user) throw new AppError('User not found', 404);
+
+        user.accountStatus = 'closure_requested';
+        // Log the reason or save to a dedicated table if needed
+        await user.save();
+        return user;
+    }
 }
 
 export const authService = new AuthService();

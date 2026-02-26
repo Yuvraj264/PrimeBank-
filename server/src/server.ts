@@ -16,6 +16,8 @@ import cardRoutes from './routes/cardRoutes';
 import dashboardRoutes from './routes/dashboardRoutes';
 import billRoutes from './routes/billRoutes';
 import investmentRoutes from './routes/investmentRoutes';
+import notificationRoutes from './routes/notificationRoutes';
+import supportRoutes from './routes/supportRoutes';
 import errorHandler from './middlewares/errorHandler';
 import dotenv from 'dotenv';
 import { AppError } from './utils/appError';
@@ -53,6 +55,8 @@ app.use('/api/v1/cards', cardRoutes);
 app.use('/api/v1/dashboard', dashboardRoutes);
 app.use('/api/v1/bills', billRoutes);
 app.use('/api/v1/investments', investmentRoutes);
+app.use('/api/v1/notifications', notificationRoutes);
+app.use('/api/v1/support', supportRoutes);
 
 app.use((req, res, next) => {
     next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));

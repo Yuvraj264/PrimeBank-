@@ -25,8 +25,13 @@ export interface IUser extends Document {
     role: 'customer' | 'admin' | 'employee'; // keeping employee from old schema just in case
     isVerified: boolean;
     kycStatus: 'pending' | 'approved' | 'rejected';
-    accountStatus: 'active' | 'frozen' | 'closed';
+    accountStatus: 'active' | 'frozen' | 'closed' | 'closure_requested';
     refreshToken?: string;
+    preferences?: {
+        theme: 'light' | 'dark' | 'system';
+        emailNotifications: boolean;
+        smsNotifications: boolean;
+    };
 
     // Legacy fields that might still be needed by existing controllers temporarily during transition
     name?: string;
@@ -45,8 +50,13 @@ const UserSchema: Schema = new Schema({
     role: { type: String, enum: ['customer', 'admin', 'employee'], default: 'customer' },
     isVerified: { type: Boolean, default: false },
     kycStatus: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
-    accountStatus: { type: String, enum: ['active', 'frozen', 'closed'], default: 'active' },
+    accountStatus: { type: String, enum: ['active', 'frozen', 'closed', 'closure_requested'], default: 'active' },
     refreshToken: { type: String },
+    preferences: {
+        theme: { type: String, enum: ['light', 'dark', 'system'], default: 'system' },
+        emailNotifications: { type: Boolean, default: true },
+        smsNotifications: { type: Boolean, default: true }
+    },
 
     // Legacy mapping (virtual or actual fields kept for a smooth transition before controller rewrites)
     name: { type: String },

@@ -4,6 +4,7 @@ import { userRepository } from '../repositories/UserRepository';
 import { notificationRepository } from '../repositories/NotificationRepository';
 import { AppError } from '../utils/appError';
 import { ITransaction } from '../models/Transaction';
+import { notificationService } from './NotificationService';
 import mongoose from 'mongoose';
 
 export class TransactionService {
@@ -363,7 +364,7 @@ export class TransactionService {
         account.balance += Number(amount);
         await accountRepository.updateById(account._id as any, { balance: account.balance } as any);
 
-        return await transactionRepository.create({
+        const transaction = await transactionRepository.create({
             userId: userId as any,
             accountId: account._id as any,
             type: 'deposit',
@@ -372,6 +373,14 @@ export class TransactionService {
             description: 'Deposit',
             category: 'income'
         });
+
+        await notificationService.createNotification(
+            userId,
+            'deposit_alert',
+            `Successfully deposited ${amount} into your account.`
+        );
+
+        return transaction;
     }
 
     async withdraw(userId: string, amount: number): Promise<ITransaction> {
@@ -384,7 +393,7 @@ export class TransactionService {
         account.balance -= Number(amount);
         await accountRepository.updateById(account._id as any, { balance: account.balance } as any);
 
-        return await transactionRepository.create({
+        const transaction = await transactionRepository.create({
             userId: userId as any,
             accountId: account._id as any,
             type: 'withdrawal',
@@ -393,6 +402,14 @@ export class TransactionService {
             description: 'Withdrawal',
             category: 'expense'
         });
+
+        await notificationService.createNotification(
+            userId,
+            'withdrawal_alert',
+            `Successfully withdrew ${amount} from your account.`
+        );
+
+        return transaction;
     }
 
     async payBill(userId: string, data: any): Promise<ITransaction> {

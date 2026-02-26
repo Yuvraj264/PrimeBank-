@@ -3,6 +3,7 @@ import { accountRepository } from '../repositories/AccountRepository';
 import { transactionRepository } from '../repositories/TransactionRepository';
 import { AppError } from '../utils/appError';
 import { ILoan } from '../models/Loan';
+import { notificationService } from './NotificationService';
 import mongoose from 'mongoose';
 
 export class LoanService {
@@ -64,12 +65,20 @@ export class LoanService {
         loan.adminComment = adminComment;
         loan.approvedBy = adminId as any;
         loan.approvedAt = new Date();
-        return await loanRepository.updateById(id, {
+        const updatedLoan = await loanRepository.updateById(id, {
             status: loan.status,
             adminComment: loan.adminComment,
             approvedBy: loan.approvedBy,
             approvedAt: loan.approvedAt
         } as any) as ILoan;
+
+        await notificationService.createNotification(
+            updatedLoan.userId.toString(),
+            'loan_update',
+            `Your loan application for ${updatedLoan.principalAmount} has been ${status}.`
+        );
+
+        return updatedLoan;
     }
 
     async prepayLoan(userId: string, data: any): Promise<ILoan> {
@@ -134,6 +143,12 @@ export class LoanService {
 
             await session.commitTransaction();
             session.endSession();
+
+            await notificationService.createNotification(
+                userId,
+                'loan_payment',
+                `Successfully prepaid ${amountToPay} towards your loan.`
+            );
 
             return loan;
         } catch (error) {
