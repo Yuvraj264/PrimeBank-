@@ -1,7 +1,7 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IAuditLog extends Document {
-    adminId: mongoose.Schema.Types.ObjectId;
+    userId?: mongoose.Schema.Types.ObjectId;
     action: string;
     targetId?: mongoose.Schema.Types.ObjectId;
     targetModel?: string;
@@ -12,7 +12,7 @@ export interface IAuditLog extends Document {
 }
 
 const AuditLogSchema: Schema = new Schema({
-    adminId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     action: { type: String, required: true },
     targetId: { type: mongoose.Schema.Types.ObjectId },
     targetModel: { type: String },

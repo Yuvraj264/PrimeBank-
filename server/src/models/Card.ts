@@ -1,4 +1,19 @@
 import mongoose, { Schema, Document } from 'mongoose';
+import { encrypt, decrypt } from '../utils/crypto';
+
+function setEncrypt(value: string) {
+    if (!value || value.includes(':')) return value;
+    return encrypt(value);
+}
+
+function getDecrypt(value: string) {
+    if (!value || !value.includes(':')) return value;
+    try {
+        return decrypt(value);
+    } catch (err) {
+        return value;
+    }
+}
 
 /*
 CARDS TABLE DESIGN:
@@ -38,10 +53,10 @@ export interface ICard extends Document {
 
 const CardSchema: Schema = new Schema({
     accountId: { type: mongoose.Schema.Types.ObjectId, ref: 'Account', required: true },
-    cardNumber: { type: String, required: true, unique: true },
+    cardNumber: { type: String, required: true, unique: true, set: setEncrypt, get: getDecrypt },
     cardType: { type: String, enum: ['debit', 'credit'], required: true, default: 'debit' },
     expiry: { type: String, required: true }, // Format: MM/YY
-    cvv: { type: String, required: true },
+    cvv: { type: String, required: true, set: setEncrypt, get: getDecrypt },
     isFrozen: { type: Boolean, default: false },
     dailyLimit: { type: Number, default: 100000 },
     onlineLimit: { type: Number, default: 50000 },
@@ -59,6 +74,7 @@ const CardSchema: Schema = new Schema({
     toJSON: {
         virtuals: true,
         versionKey: false,
+        getters: true,
         transform: function (doc: any, ret: any) {
             delete ret._id;
         }

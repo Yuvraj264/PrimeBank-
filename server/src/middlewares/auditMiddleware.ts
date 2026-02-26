@@ -15,7 +15,7 @@ export const logAction = (action: string) => {
             if (res.statusCode >= 200 && res.statusCode < 300) {
                 try {
                     await AuditLog.create({
-                        adminId: req.user?._id as any,
+                        userId: req.user?._id as any,
                         action,
                         targetId: req.params.id as any, // Assuming ID is in params for resource actions
                         details: `Method: ${req.method}, URL: ${req.originalUrl}`,

@@ -6,13 +6,19 @@ import jwt from 'jsonwebtoken';
 import { IUser } from '../models/User';
 
 export class AuthService {
-    private signToken(id: string): string {
+    private signAccessToken(id: string): string {
         return jwt.sign({ id }, process.env.JWT_SECRET!, {
-            expiresIn: '30d',
+            expiresIn: '15m',
         });
     }
 
-    async register(data: any): Promise<{ user: IUser; token: string }> {
+    private signRefreshToken(id: string): string {
+        return jwt.sign({ id }, process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET!, {
+            expiresIn: '7d',
+        });
+    }
+
+    async register(data: any): Promise<{ user: IUser; accessToken: string; refreshToken: string }> {
         const { name, email, password, role, phone } = data;
 
         const userExists = await userRepository.findByEmail(email);
@@ -56,19 +62,50 @@ export class AuthService {
             });
         }
 
-        const token = this.signToken((user._id as any).toString());
-        return { user, token };
+        const accessToken = this.signAccessToken((user._id as any).toString());
+        const refreshToken = this.signRefreshToken((user._id as any).toString());
+
+        user.refreshToken = refreshToken;
+        await user.save();
+
+        return { user, accessToken, refreshToken };
     }
 
-    async login(email: string, password: string): Promise<{ user: IUser; token: string }> {
+    async login(email: string, password: string): Promise<{ user: IUser; accessToken: string; refreshToken: string }> {
         const user = await userRepository.findByEmail(email, true);
 
         if (!user || !(await user.matchPassword(password))) {
             throw new AppError('Invalid email or password', 401);
         }
 
-        const token = this.signToken((user._id as any).toString());
-        return { user, token };
+        const accessToken = this.signAccessToken((user._id as any).toString());
+        const refreshToken = this.signRefreshToken((user._id as any).toString());
+
+        user.refreshToken = refreshToken;
+        await user.save();
+
+        return { user, accessToken, refreshToken };
+    }
+
+    async refresh(token: string): Promise<{ accessToken: string; refreshToken: string }> {
+        const decoded: any = jwt.verify(token, process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET!);
+        const user = await userRepository.findById(decoded.id);
+
+        if (!user || user.refreshToken !== token) {
+            throw new AppError('Invalid refresh token', 401);
+        }
+
+        const accessToken = this.signAccessToken((user._id as any).toString());
+        const refreshToken = this.signRefreshToken((user._id as any).toString());
+
+        user.refreshToken = refreshToken;
+        await user.save();
+
+        return { accessToken, refreshToken };
+    }
+
+    async logout(userId: string): Promise<void> {
+        await userRepository.updateById(userId, { refreshToken: '' } as any);
     }
 
     async getMe(userId: string): Promise<IUser> {
@@ -85,6 +122,14 @@ export class AuthService {
             throw new AppError('Incorrect password', 401);
         }
         return true;
+    }
+
+    async setTransactionPin(userId: string, pin: string): Promise<void> {
+        const user = await userRepository.findById(userId);
+        if (!user) throw new AppError('User not found', 404);
+
+        user.transactionPin = String(pin);
+        await user.save();
     }
 
     async updateProfile(userId: string, data: any): Promise<IUser> {

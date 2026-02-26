@@ -111,7 +111,7 @@ export class AdminService {
         if (action) filter.action = { $regex: action, $options: 'i' };
 
         return await auditLogRepository.model.find(filter)
-            .populate('adminId', 'name email')
+            .populate('userId', 'name email')
             .sort({ timestamp: -1 })
             .limit(100);
     }
