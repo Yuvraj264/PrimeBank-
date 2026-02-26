@@ -29,30 +29,6 @@ export const deleteBeneficiary = catchAsync(async (req: AuthRequest, res: Respon
 
 export const updateBeneficiary = catchAsync(async (req: AuthRequest, res: Response, next: NextFunction) => {
     const userId = (req.user!._id as any).toString();
-
-    // In BeneficiaryService we used updateById which doesn't filter by userId.
-    // It's safer to just do findOneAndUpdate using the Model directly if we haven't added it to baseRepo.
-    // Let's call the service
-
-    // Wait, the original code used findOneAndUpdate with _id and userId
-    // I should fix this logic to use the repo correctly or just let the service handle it correctly.
-    const { nickname, isFavorite, dailyLimit } = req.body;
-
-    const beneficiary = await beneficiaryRepository.model.findOneAndUpdate(
-        { _id: req.params.id as string, userId: userId as any },
-        {
-            $set: {
-                ...(nickname !== undefined && { nickname }),
-                ...(isFavorite !== undefined && { isFavorite }),
-                ...(dailyLimit !== undefined && { dailyLimit })
-            }
-        },
-        { new: true, runValidators: true }
-    );
-
-    if (!beneficiary) {
-        return next(new AppError('Beneficiary not found', 404));
-    }
-
+    const beneficiary = await beneficiaryService.updateBeneficiary(req.params.id as string, userId, req.body);
     res.status(200).json({ status: 'success', data: beneficiary });
 });

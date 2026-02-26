@@ -29,27 +29,29 @@ export class BeneficiaryService {
     }
 
     async deleteBeneficiary(id: string, userId: string): Promise<void> {
-        const beneficiary = await beneficiaryRepository.findOneAndDelete(id, userId);
+        const beneficiary = await beneficiaryRepository.model.findOneAndDelete({ _id: id, userId: userId as any });
         if (!beneficiary) {
-            throw new AppError('Beneficiary not found', 404);
+            throw new AppError('Beneficiary not found or you do not have permission', 404);
         }
     }
 
     async updateBeneficiary(id: string, userId: string, data: any): Promise<IBeneficiary> {
         const { nickname, isFavorite, dailyLimit } = data;
 
-        const beneficiary = await beneficiaryRepository.updateById(id, {
-            $set: {
-                ...(nickname !== undefined && { nickname }),
-                ...(isFavorite !== undefined && { isFavorite }),
-                ...(dailyLimit !== undefined && { dailyLimit })
-            }
-        } as any);
+        const beneficiary = await beneficiaryRepository.model.findOneAndUpdate(
+            { _id: id, userId: userId as any },
+            {
+                $set: {
+                    ...(nickname !== undefined && { nickname }),
+                    ...(isFavorite !== undefined && { isFavorite }),
+                    ...(dailyLimit !== undefined && { dailyLimit })
+                }
+            },
+            { new: true, runValidators: true }
+        );
 
-        if (!beneficiary || beneficiary.userId.toString() !== userId) {
-            // Need to ensure the beneficiary actually belonged to the user!
-            // updateById only checks ID. Let's do a double check or custom query.
-            throw new AppError('Beneficiary not found', 404);
+        if (!beneficiary) {
+            throw new AppError('Beneficiary not found or you do not have permission', 404);
         }
 
         return beneficiary;
