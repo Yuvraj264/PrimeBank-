@@ -17,10 +17,13 @@ import dashboardRoutes from './routes/dashboardRoutes';
 import errorHandler from './middlewares/errorHandler';
 import dotenv from 'dotenv';
 import { AppError } from './utils/appError';
+import { startTransactionCronJobs } from './jobs/transactionJobs';
 
 dotenv.config();
 
 connectDB();
+
+startTransactionCronJobs();
 
 const app = express();
 

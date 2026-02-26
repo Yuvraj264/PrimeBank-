@@ -207,8 +207,151 @@ export class TransactionService {
         }
     }
 
-    async getMyTransactions(userId: string): Promise<ITransaction[]> {
-        return await transactionRepository.findByUserIdSorted(userId);
+    async bankTransfer(userId: string, data: any): Promise<void> {
+        const { receiverBankName, receiverAccountNumber, receiverIFSC, amount, description, fromAccountId } = data;
+
+        let senderAccount;
+        if (fromAccountId) {
+            senderAccount = await accountRepository.findByIdAndUserId(fromAccountId, userId);
+        } else {
+            const accounts = await accountRepository.findByUserId(userId);
+            senderAccount = accounts[0];
+        }
+
+        if (!senderAccount) throw new AppError('Sender account not found', 404);
+        if (senderAccount.status !== 'active' && senderAccount.status !== 'dormant') throw new AppError(`Sender account is ${senderAccount.status}`, 400);
+
+        // Deduct here or inside cron? For bank transfers, usually we deduct immediately to prevent double spend, then keep transaction pending. 
+        if (senderAccount.balance < amount) throw new AppError('Insufficient balance', 400);
+
+        const today = new Date();
+        const lastReset = new Date(senderAccount.lastLimitResetDate || 0);
+        if (today.toDateString() !== lastReset.toDateString()) {
+            senderAccount.usedLimit = 0;
+            senderAccount.lastLimitResetDate = today;
+        }
+
+        const usedLimit = senderAccount.usedLimit || 0;
+        const dailyLimit = senderAccount.dailyLimit || 50000;
+        if (usedLimit + Number(amount) > dailyLimit) {
+            throw new AppError(`Daily transaction limit exceeded. Remaining limit: ${dailyLimit - usedLimit}`, 400);
+        }
+
+        const session = await mongoose.startSession();
+        session.startTransaction();
+
+        try {
+            const transaction = await transactionRepository.model.create([{
+                userId: userId as any,
+                accountId: senderAccount._id as any,
+                type: 'transfer',
+                method: 'neft', // Example
+                amount: -amount,
+                currency: senderAccount.currency,
+                status: 'pending', // Pending to allow for cron simulation
+                receiverName: `Bank Transfer - ${receiverBankName}`,
+                receiverAccountId: receiverAccountNumber,
+                description: description || 'Bank Transfer',
+                category: 'transfer',
+                processingDelay: 2, // Assuming hours
+                scheduledDate: new Date(Date.now() + 2 * 60 * 60 * 1000) // 2 hours from now
+            }], { session });
+
+            senderAccount.balance -= Number(amount);
+            senderAccount.usedLimit = (senderAccount.usedLimit || 0) + Number(amount);
+            await senderAccount.save({ session });
+
+            // Create a pseudo receiver transaction if needed, or simply let the external bank handle it. Since we are simulating, we only hold the debit transaction.
+            await session.commitTransaction();
+            session.endSession();
+        } catch (error) {
+            await session.abortTransaction();
+            session.endSession();
+            throw error;
+        }
+    }
+
+    async scheduledTransfer(userId: string, data: any): Promise<void> {
+        const { receiverAccountNumber, amount, description, fromAccountId, scheduledDate } = data;
+
+        if (!scheduledDate || new Date(scheduledDate) <= new Date()) {
+            throw new AppError('Scheduled date must be in the future', 400);
+        }
+
+        let senderAccount;
+        if (fromAccountId) {
+            senderAccount = await accountRepository.findByIdAndUserId(fromAccountId, userId);
+        } else {
+            const accounts = await accountRepository.findByUserId(userId);
+            senderAccount = accounts[0];
+        }
+
+        if (!senderAccount) throw new AppError('Sender account not found', 404);
+        if (senderAccount.status !== 'active' && senderAccount.status !== 'dormant') throw new AppError(`Sender account is ${senderAccount.status}`, 400);
+
+        // We DO NOT deduct balance yet for scheduled transfer. We will check balance when the cron job executes it.
+        // We just record the scheduled intention.
+        await transactionRepository.create({
+            userId: userId as any,
+            accountId: senderAccount._id as any,
+            type: 'transfer',
+            amount: -amount,
+            currency: senderAccount.currency,
+            status: 'pending',
+            receiverName: 'Scheduled Transfer',
+            receiverAccountId: receiverAccountNumber,
+            description: description || 'Scheduled Transfer',
+            category: 'transfer',
+            scheduledDate: new Date(scheduledDate)
+        });
+    }
+
+    async getMyTransactions(userId: string, queryParams: any): Promise<any> {
+        const { startDate, endDate, status, type, search, page, limit } = queryParams;
+
+        let filters: any = {
+            $or: [
+                { userId: userId as any },
+                { 'receiverAccountId': { $exists: true } } // Mongoose handles this gracefully for legacy string matching, let's refine this to specifically match toAccountId or fromAccountId if needed.
+            ]
+        };
+
+        // For stricter schema matching
+        filters = {
+            $or: [
+                { userId: userId as any },
+                { fromAccountId: userId as any }, // if it's an ObjectId reference
+                { toAccountId: userId as any }
+            ]
+        };
+
+        if (status) filters.status = status;
+        if (type) filters.type = type;
+
+        if (startDate || endDate) {
+            filters.date = {};
+            if (startDate) filters.date.$gte = new Date(startDate);
+            if (endDate) filters.date.$lte = new Date(endDate);
+        }
+
+        if (search) {
+            const regex = new RegExp(search, 'i');
+            filters.$and = [
+                {
+                    $or: [
+                        { description: { $regex: regex } },
+                        { referenceId: { $regex: regex } },
+                        { method: { $regex: regex } }
+                    ]
+                }
+            ];
+        }
+
+        const pageNumber = parseInt(page as string, 10) || 1;
+        const limitNumber = parseInt(limit as string, 10) || 10;
+        const skip = (pageNumber - 1) * limitNumber;
+
+        return await transactionRepository.findTransactionsWithFilters(filters, skip, limitNumber);
     }
 
     async deposit(userId: string, amount: number): Promise<ITransaction> {

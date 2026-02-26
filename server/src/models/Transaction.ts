@@ -23,6 +23,8 @@ export interface ITransaction extends Document {
     status: 'pending' | 'completed' | 'failed';
     description?: string;
     referenceId?: string;
+    scheduledDate?: Date;
+    processingDelay?: number; // Represented in milliseconds or minutes. Let's say hours.
 
     // Legacy fields for existing controllers
     userId?: mongoose.Schema.Types.ObjectId;
@@ -48,6 +50,8 @@ const TransactionSchema: Schema = new Schema({
     status: { type: String, enum: ['pending', 'completed', 'failed'], default: 'completed' },
     description: { type: String },
     referenceId: { type: String },
+    scheduledDate: { type: Date },
+    processingDelay: { type: Number },
 
     // Legacy fields
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
