@@ -26,6 +26,23 @@ export const transferFound = catchAsync(async (req: AuthRequest, res: Response, 
     res.status(200).json({ status: 'success', message: 'Transfer successful' });
 });
 
+export const transferInternal = catchAsync(async (req: AuthRequest, res: Response, next: NextFunction) => {
+    const userId = (req.user!._id as any).toString();
+    const { pin, ...data } = req.body;
+
+    if (!req.user!.transactionPin) {
+        return next(new AppError('Please set a Transaction PIN before making transfers', 400));
+    }
+
+    if (!pin || !(await req.user!.matchTransactionPin(String(pin)))) {
+        return next(new AppError('Invalid or missing Transaction PIN', 401));
+    }
+
+    await transactionService.internalTransfer(userId, data);
+    await auditService.logTransaction(userId, 'N/A', 'Internal Transfer', `Amount: ${data.amount} to account ${data.receiverAccountNumber}`, req.ip || 'unknown');
+    res.status(200).json({ status: 'success', message: 'Internal transfer completed successfully' });
+});
+
 export const getMyTransactions = catchAsync(async (req: AuthRequest, res: Response, next: NextFunction) => {
     const userId = (req.user!._id as any).toString();
     const transactions = await transactionService.getMyTransactions(userId);
