@@ -27,6 +27,10 @@ export interface IUser extends Document {
     kycStatus: 'pending' | 'approved' | 'rejected';
     accountStatus: 'active' | 'frozen' | 'closed' | 'closure_requested';
     refreshToken?: string;
+    // AML / KYC fields
+    isPEP: boolean;
+    riskScore: number;
+    riskLevel: 'low' | 'medium' | 'high';
     preferences?: {
         theme: 'light' | 'dark' | 'system';
         emailNotifications: boolean;
@@ -52,6 +56,9 @@ const UserSchema: Schema = new Schema({
     kycStatus: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
     accountStatus: { type: String, enum: ['active', 'frozen', 'closed', 'closure_requested'], default: 'active' },
     refreshToken: { type: String },
+    isPEP: { type: Boolean, default: false },
+    riskScore: { type: Number, default: 10, min: 0, max: 100 },
+    riskLevel: { type: String, enum: ['low', 'medium', 'high'], default: 'low' },
     preferences: {
         theme: { type: String, enum: ['light', 'dark', 'system'], default: 'system' },
         emailNotifications: { type: Boolean, default: true },

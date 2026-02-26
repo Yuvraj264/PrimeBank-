@@ -5,11 +5,17 @@ import { notificationRepository } from '../repositories/NotificationRepository';
 import { AppError } from '../utils/appError';
 import { ITransaction } from '../models/Transaction';
 import { notificationService } from './NotificationService';
+import { complianceService } from './ComplianceService';
 import mongoose from 'mongoose';
 
 export class TransactionService {
     async transferFunds(userId: string, data: any): Promise<void> {
         const { receiverAccountNumber, amount, description, fromAccountId } = data;
+
+        const complianceCheck = await complianceService.analyzeTransaction(userId, amount, 'transfer', undefined);
+        if (complianceCheck.isBlocked) {
+            throw new AppError(complianceCheck.reason || 'Transaction flagged by Compliance Engine', 403);
+        }
 
         let senderAccount;
         if (fromAccountId) {
@@ -93,6 +99,11 @@ export class TransactionService {
 
     async internalTransfer(userId: string, data: any): Promise<void> {
         const { receiverAccountNumber, amount, description, fromAccountId } = data;
+
+        const complianceCheck = await complianceService.analyzeTransaction(userId, amount, 'internal_transfer', undefined);
+        if (complianceCheck.isBlocked) {
+            throw new AppError(complianceCheck.reason || 'Transaction flagged by Compliance Engine', 403);
+        }
 
         const session = await mongoose.startSession();
         session.startTransaction();
@@ -211,6 +222,11 @@ export class TransactionService {
     async bankTransfer(userId: string, data: any): Promise<void> {
         const { receiverBankName, receiverAccountNumber, receiverIFSC, amount, description, fromAccountId } = data;
 
+        const complianceCheck = await complianceService.analyzeTransaction(userId, amount, 'bank_transfer', receiverBankName); // Flagging receiver bank mapping
+        if (complianceCheck.isBlocked) {
+            throw new AppError(complianceCheck.reason || 'Transaction flagged by Compliance Engine', 403);
+        }
+
         let senderAccount;
         if (fromAccountId) {
             senderAccount = await accountRepository.findByIdAndUserId(fromAccountId, userId);
@@ -274,6 +290,11 @@ export class TransactionService {
 
     async scheduledTransfer(userId: string, data: any): Promise<void> {
         const { receiverAccountNumber, amount, description, fromAccountId, scheduledDate } = data;
+
+        const complianceCheck = await complianceService.analyzeTransaction(userId, amount, 'scheduled_transfer', undefined);
+        if (complianceCheck.isBlocked) {
+            throw new AppError(complianceCheck.reason || 'Transaction flagged by Compliance Engine', 403);
+        }
 
         if (!scheduledDate || new Date(scheduledDate) <= new Date()) {
             throw new AppError('Scheduled date must be in the future', 400);
