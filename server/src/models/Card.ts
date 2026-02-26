@@ -81,13 +81,16 @@ const CardSchema: Schema = new Schema({
     }
 });
 
-CardSchema.pre('save', async function () {
+CardSchema.pre('validate', async function () {
     const doc = this as any as ICard;
     if (doc.expiryDate && !doc.expiry) doc.expiry = doc.expiryDate;
     if (doc.expiry && !doc.expiryDate) doc.expiryDate = doc.expiry;
 
     if (doc.status === 'frozen') doc.isFrozen = true;
     if (doc.isFrozen) doc.status = 'frozen';
+});
+
+CardSchema.pre('save', async function () {
 });
 
 export default mongoose.model<ICard>('Card', CardSchema);

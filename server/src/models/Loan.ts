@@ -69,7 +69,7 @@ const LoanSchema: Schema = new Schema({
     appliedAt: { type: Date, default: Date.now }
 }, { timestamps: true });
 
-LoanSchema.pre('save', async function () {
+LoanSchema.pre('validate', async function () {
     const doc = this as any as ILoan;
     if (doc.type && !doc.loanType) doc.loanType = doc.type as any;
     if (doc.loanType && !doc.type) doc.type = doc.loanType;
@@ -80,6 +80,9 @@ LoanSchema.pre('save', async function () {
     }
 
     if (doc.tenure && !doc.tenureMonths) doc.tenureMonths = doc.tenure;
+});
+
+LoanSchema.pre('save', async function () {
 });
 
 export default mongoose.model<ILoan>('Loan', LoanSchema);

@@ -53,9 +53,8 @@ const UserSchema: Schema = new Schema({
     status: { type: String }
 }, { timestamps: true });
 
-UserSchema.pre('save', async function () {
+UserSchema.pre('validate', async function () {
     const user = this as any as IUser;
-
     // Auto-sync legacy fields
     if (user.fullName && !user.name) user.name = user.fullName;
     if (user.name && !user.fullName) user.fullName = user.name;
@@ -63,6 +62,10 @@ UserSchema.pre('save', async function () {
     if (user.accountStatus && !user.status) {
         user.status = user.accountStatus === 'frozen' ? 'blocked' : user.accountStatus as any;
     }
+});
+
+UserSchema.pre('save', async function () {
+    const user = this as any as IUser;
 
     if (user.isModified('transactionPin') && user.transactionPin) {
         const saltPin = await bcrypt.genSalt(10);
