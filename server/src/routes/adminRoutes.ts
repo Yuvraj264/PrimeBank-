@@ -15,7 +15,7 @@ import {
     blacklistIP,
     removeBlacklistedIP
 } from '../controllers/adminController';
-import { protect, restrictTo } from '../middleware/authMiddleware';
+import { protect, restrictTo } from '../middlewares/authMiddleware';
 import express from 'express';
 
 const router = express.Router();

@@ -12,7 +12,7 @@ import customerRoutes from './routes/customerRoutes';
 import adminRoutes from './routes/adminRoutes';
 import accountRoutes from './routes/accountRoutes';
 import cardRoutes from './routes/cardRoutes';
-import errorHandler from './middleware/errorHandler';
+import errorHandler from './middlewares/errorHandler';
 import dotenv from 'dotenv';
 import { AppError } from './utils/appError';
 

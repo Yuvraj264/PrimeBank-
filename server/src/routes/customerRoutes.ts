@@ -1,6 +1,6 @@
 import express from 'express';
 import { getAllCustomers, getCustomerById, updateCustomerStatus, createCustomer } from '../controllers/customerController';
-import { protect, restrictTo } from '../middleware/authMiddleware';
+import { protect, restrictTo } from '../middlewares/authMiddleware';
 
 const router = express.Router();
 

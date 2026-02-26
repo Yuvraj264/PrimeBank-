@@ -1,6 +1,6 @@
 import express from 'express';
 import { applyLoan, getMyLoans, getAllLoans, updateLoanStatus } from '../controllers/loanController';
-import { protect, restrictTo } from '../middleware/authMiddleware';
+import { protect, restrictTo } from '../middlewares/authMiddleware';
 
 const router = express.Router();
 

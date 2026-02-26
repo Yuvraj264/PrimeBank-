@@ -1,6 +1,6 @@
 import express from 'express';
 import { submitKYC, getAllKYCRequests, getPendingKYCRequests, updateKYCStatus } from '../controllers/kycController';
-import { protect, restrictTo } from '../middleware/authMiddleware';
+import { protect, restrictTo } from '../middlewares/authMiddleware';
 
 const router = express.Router();
 

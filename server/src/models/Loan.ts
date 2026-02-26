@@ -1,36 +1,65 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
+/*
+LOANS TABLE DESIGN:
+id -> Mongoose _id
+user_id -> userId
+loan_type -> loanType
+principal_amount -> principalAmount
+interest_rate -> interestRate
+tenure_months -> tenureMonths
+emi_amount -> emiAmount
+remaining_balance -> remainingBalance
+status -> status (pending/approved/rejected)
+created_at -> timestamps
+*/
+
 export interface ILoan extends Document {
     userId: mongoose.Schema.Types.ObjectId;
-    type: 'personal' | 'home' | 'education' | 'car';
-    amount: number;
-    tenure: number; // in months
+    loanType: 'personal' | 'home' | 'education' | 'car';
+    principalAmount: number;
     interestRate: number;
+    tenureMonths: number;
+    emiAmount: number;
+    remainingBalance: number;
     status: 'pending' | 'approved' | 'rejected';
-    creditScore: number;
-    monthlyIncome: number;
-    employmentStatus: string;
+
+    // Legacy fields
+    type?: string;
+    amount?: number;
+    tenure?: number;
+    creditScore?: number;
+    monthlyIncome?: number;
+    employmentStatus?: string;
     adminComment?: string;
     approvedBy?: mongoose.Schema.Types.ObjectId;
     approvedAt?: Date;
-    appliedAt: Date;
+    appliedAt?: Date;
 }
 
 const LoanSchema: Schema = new Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    type: {
+    loanType: {
         type: String,
         enum: ['personal', 'home', 'education', 'car'],
-        required: true
+        required: true,
+        default: 'personal'
     },
-    amount: { type: Number, required: true },
-    tenure: { type: Number, required: true },
+    principalAmount: { type: Number, required: true },
     interestRate: { type: Number, required: true },
+    tenureMonths: { type: Number, required: true },
+    emiAmount: { type: Number, required: true, default: 0 },
+    remainingBalance: { type: Number, required: true },
     status: {
         type: String,
         enum: ['pending', 'approved', 'rejected'],
         default: 'pending'
     },
+
+    // Legacy fields
+    type: { type: String, enum: ['personal', 'home', 'education', 'car'] },
+    amount: { type: Number },
+    tenure: { type: Number },
     creditScore: { type: Number },
     monthlyIncome: { type: Number },
     employmentStatus: { type: String },
@@ -39,5 +68,18 @@ const LoanSchema: Schema = new Schema({
     approvedAt: { type: Date },
     appliedAt: { type: Date, default: Date.now }
 }, { timestamps: true });
+
+LoanSchema.pre('save', async function () {
+    const doc = this as any as ILoan;
+    if (doc.type && !doc.loanType) doc.loanType = doc.type as any;
+    if (doc.loanType && !doc.type) doc.type = doc.loanType;
+
+    if (doc.amount && !doc.principalAmount) {
+        doc.principalAmount = doc.amount;
+        doc.remainingBalance = doc.amount; // default initialization
+    }
+
+    if (doc.tenure && !doc.tenureMonths) doc.tenureMonths = doc.tenure;
+});
 
 export default mongoose.model<ILoan>('Loan', LoanSchema);

@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { Transaction } from '@/types';
+import { ArrowUpRight, ArrowDownRight, ArrowUpDown, ChevronDown, ChevronUp, Clock, FileSearch } from 'lucide-react';
+import { TableSkeleton } from '@/components/shared/LoadingSkeletons';
+import { EmptyState } from '@/components/shared/FeedbackStates';
 import StatusBadge from '@/components/shared/StatusBadge';
-import { ArrowUpRight, ArrowDownRight, ArrowUpDown, ChevronDown, ChevronUp, Clock } from 'lucide-react';
 
 interface Props {
     transactions: Transaction[];
@@ -58,36 +60,20 @@ export default function TransactionTable({ transactions, loading, onRowClick, so
 
     if (loading && transactions.length === 0) {
         return (
-            <div className="w-full space-y-3">
-                {[...Array(6)].map((_, i) => (
-                    <div key={i} className="flex items-center justify-between p-4 rounded-xl bg-secondary/10 border border-border/5 animate-pulse h-[72px]">
-                        <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 rounded-full bg-secondary/40" />
-                            <div className="space-y-2">
-                                <div className="h-4 w-32 bg-secondary/40 rounded" />
-                                <div className="h-3 w-24 bg-secondary/20 rounded" />
-                            </div>
-                        </div>
-                        <div className="flex gap-6 items-center">
-                            <div className="h-6 w-20 bg-secondary/40 rounded-full hidden md:block" />
-                            <div className="h-5 w-16 bg-secondary/40 rounded" />
-                        </div>
-                    </div>
-                ))}
+            <div className="mt-6">
+                <TableSkeleton rows={6} columns={5} />
             </div>
         );
     }
 
     if (transactions.length === 0) {
         return (
-            <div className="text-center py-16 px-4">
-                <div className="w-16 h-16 bg-secondary/30 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Clock className="w-8 h-8 text-muted-foreground opacity-50" />
-                </div>
-                <h3 className="text-lg font-semibold tracking-tight">No transactions found</h3>
-                <p className="text-sm text-muted-foreground mt-1 max-w-sm mx-auto">
-                    We couldn't find any transactions matching your current filters. Try adjusting them or clearing your search.
-                </p>
+            <div className="mt-6">
+                <EmptyState
+                    icon={FileSearch}
+                    title="No transactions found"
+                    description="We couldn't find any financial records matching your current filter criteria."
+                />
             </div>
         );
     }
@@ -128,8 +114,8 @@ export default function TransactionTable({ transactions, loading, onRowClick, so
                             >
                                 <td className="px-5 py-4 w-16 hidden md:table-cell transition-transform group-hover:scale-110">
                                     <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isIncoming ? 'bg-success/10 text-success' :
-                                            isBill ? 'bg-orange-500/10 text-orange-500' :
-                                                'bg-destructive/10 text-destructive'
+                                        isBill ? 'bg-orange-500/10 text-orange-500' :
+                                            'bg-destructive/10 text-destructive'
                                         }`}>
                                         {isIncoming ? <ArrowDownRight className="w-5 h-5" /> : <ArrowUpRight className="w-5 h-5" />}
                                     </div>

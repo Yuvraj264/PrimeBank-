@@ -1,6 +1,6 @@
 import express from 'express';
 import { getMyCards, getCardDetails, createCard, toggleCardFreeze } from '../controllers/cardController';
-import { protect } from '../middleware/authMiddleware';
+import { protect } from '../middlewares/authMiddleware';
 
 const router = express.Router();
 

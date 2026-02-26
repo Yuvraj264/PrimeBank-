@@ -1,6 +1,6 @@
 import express from 'express';
 import { transferFound, getMyTransactions, deposit, withdraw, payBill, getAllTransactions } from '../controllers/transactionController';
-import { protect, restrictTo } from '../middleware/authMiddleware';
+import { protect, restrictTo } from '../middlewares/authMiddleware';
 
 const router = express.Router();
 

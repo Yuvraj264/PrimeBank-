@@ -1,93 +1,64 @@
 import mongoose, { Schema, Document } from 'mongoose';
 import bcrypt from 'bcryptjs';
 
+/*
+USERS TABLE DESIGN:
+id (UUID) -> Mongoose _id
+full_name -> fullName
+email (unique)
+phone (unique)
+password_hash -> password (hashed via pre-save hook)
+role (customer/admin)
+is_verified -> isVerified
+kyc_status (pending/approved/rejected) -> kycStatus
+account_status (active/frozen/closed) -> accountStatus
+created_at -> timestamps
+updated_at -> timestamps
+*/
+
 export interface IUser extends Document {
-    name: string;
+    fullName: string;
     email: string;
-    password?: string;
-    role: 'admin' | 'employee' | 'customer';
     phone: string;
-    status: 'active' | 'blocked' | 'pending';
-    twoFactorEnabled: boolean;
-    profileCompleted: boolean;
-    avatar?: string;
-    lastLogin?: Date;
-    personalDetails?: {
-        fullName: string;
-        dob: string;
-        gender: string;
-        maritalStatus: string;
-        fatherName: string;
-    };
-    identityDetails?: {
-        panNumber: string;
-        aadhaarNumber: string;
-    };
-    address?: {
-        street: string;
-        city: string;
-        state: string;
-        zip: string;
-        country: string;
-    };
-    professionalDetails?: {
-        occupation: string;
-        incomeSource: string;
-        annualIncome: number;
-    };
-    nominee?: {
-        name: string;
-        relation: string;
-        dob: string;
-    };
+    password?: string;
+    role: 'customer' | 'admin' | 'employee'; // keeping employee from old schema just in case
+    isVerified: boolean;
+    kycStatus: 'pending' | 'approved' | 'rejected';
+    accountStatus: 'active' | 'frozen' | 'closed';
+
+    // Legacy fields that might still be needed by existing controllers temporarily during transition
+    name?: string;
+    status?: 'active' | 'blocked' | 'pending';
+
     matchPassword(enteredPassword: string): Promise<boolean>;
-    _id: mongoose.Types.ObjectId;
-    id: string;
 }
 
 const UserSchema: Schema = new Schema({
-    name: { type: String, required: true },
+    fullName: { type: String, required: true },
     email: { type: String, required: true, unique: true },
+    phone: { type: String, required: true, unique: true },
     password: { type: String, required: true },
-    role: { type: String, enum: ['admin', 'employee', 'customer'], default: 'customer' },
-    phone: { type: String, required: true },
-    status: { type: String, enum: ['active', 'blocked', 'pending'], default: 'active' },
-    twoFactorEnabled: { type: Boolean, default: false },
-    profileCompleted: { type: Boolean, default: false },
-    avatar: { type: String },
-    lastLogin: { type: Date },
-    personalDetails: {
-        fullName: String,
-        dob: String,
-        gender: String,
-        maritalStatus: String,
-        fatherName: String,
-    },
-    identityDetails: {
-        panNumber: String,
-        aadhaarNumber: String,
-    },
-    address: {
-        street: String,
-        city: String,
-        state: String,
-        zip: String,
-        country: String,
-    },
-    professionalDetails: {
-        occupation: String,
-        incomeSource: String,
-        annualIncome: Number,
-    },
-    nominee: {
-        name: String,
-        relation: String,
-        dob: String,
-    },
+    role: { type: String, enum: ['customer', 'admin', 'employee'], default: 'customer' },
+    isVerified: { type: Boolean, default: false },
+    kycStatus: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
+    accountStatus: { type: String, enum: ['active', 'frozen', 'closed'], default: 'active' },
+
+    // Legacy mapping (virtual or actual fields kept for a smooth transition before controller rewrites)
+    name: { type: String },
+    status: { type: String }
 }, { timestamps: true });
 
 UserSchema.pre('save', async function () {
     const user = this as any as IUser;
+
+    // Auto-sync legacy fields
+    if (user.fullName && !user.name) user.name = user.fullName;
+    if (user.name && !user.fullName) user.fullName = user.name;
+
+    if (user.accountStatus && !user.status) {
+        user.status = user.accountStatus === 'frozen' ? 'blocked' : user.accountStatus as any;
+    }
+
     if (!user.isModified('password')) {
         return;
     }
