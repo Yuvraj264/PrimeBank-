@@ -23,6 +23,7 @@ export interface IUser extends Document {
     password?: string;
     transactionPin?: string;
     role: 'customer' | 'admin' | 'employee'; // keeping employee from old schema just in case
+    assignedRole?: mongoose.Types.ObjectId; // RBAC extension
     isVerified: boolean;
     kycStatus: 'pending' | 'approved' | 'rejected';
     accountStatus: 'active' | 'frozen' | 'closed' | 'closure_requested';
@@ -52,6 +53,7 @@ const UserSchema: Schema = new Schema({
     password: { type: String, required: true },
     transactionPin: { type: String },
     role: { type: String, enum: ['customer', 'admin', 'employee'], default: 'customer' },
+    assignedRole: { type: Schema.Types.ObjectId, ref: 'Role' }, // RBAC extension
     isVerified: { type: Boolean, default: false },
     kycStatus: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
     accountStatus: { type: String, enum: ['active', 'frozen', 'closed', 'closure_requested'], default: 'active' },
