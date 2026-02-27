@@ -1,5 +1,6 @@
 import { kycRequestRepository } from '../repositories/KYCRequestRepository';
 import { userRepository } from '../repositories/UserRepository';
+import { auditService } from './AuditService';
 import { AppError } from '../utils/appError';
 import { IKYCRequest } from '../models/KYCRequest';
 
@@ -53,14 +54,26 @@ export class KycService {
             reviewedBy: kycRequest.reviewedBy
         } as any);
 
+        const targetUser = await userRepository.findById(kycRequest.userId.toString());
+        if (!targetUser) throw new AppError('User missing', 404);
+        const beforeState = JSON.parse(JSON.stringify(targetUser));
+
+        let updatedUser;
         if (status === 'approved') {
-            await userRepository.updateById(kycRequest.userId as any, {
+            updatedUser = await userRepository.updateById(kycRequest.userId as any, {
                 status: 'active',
+                kycStatus: 'approved',
                 'identityDetails.verified': true
             } as any);
         } else if (status === 'rejected') {
-            await userRepository.updateById(kycRequest.userId as any, { status: 'blocked' } as any);
+            updatedUser = await userRepository.updateById(kycRequest.userId as any, {
+                status: 'blocked',
+                kycStatus: 'rejected'
+            } as any);
         }
+
+        const afterState = JSON.parse(JSON.stringify(updatedUser));
+        await auditService.logAction(reviewerId, `KYC ${status === 'approved' ? 'Approved' : 'Rejected'}`, 'User', kycRequest.userId.toString(), 'System', beforeState, afterState, status === 'approved' ? 'info' : 'warning');
 
         return kycRequest;
     }

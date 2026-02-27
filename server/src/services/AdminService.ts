@@ -6,6 +6,7 @@ import { kycRequestRepository } from '../repositories/KYCRequestRepository';
 import { auditLogRepository } from '../repositories/AuditLogRepository';
 import { systemConfigRepository } from '../repositories/SystemConfigRepository';
 import { blacklistedIPRepository } from '../repositories/BlacklistedIPRepository';
+import { auditService } from './AuditService';
 import { AppError } from '../utils/appError';
 
 export class AdminService {
@@ -82,15 +83,28 @@ export class AdminService {
         return await userRepository.model.find(filter).select('-password').sort({ createdAt: -1 });
     }
 
-    async updateUserStatus(id: string, status: string): Promise<any> {
+    async updateUserStatus(id: string, status: string, adminId: string): Promise<any> {
+        const userToUpdate = await userRepository.findById(id);
+        if (!userToUpdate) throw new AppError('User not found', 404);
+        const beforeState = JSON.parse(JSON.stringify(userToUpdate));
+
         const user = await userRepository.updateById(id, { status } as any);
         if (!user) throw new AppError('User not found', 404);
+
+        const afterState = JSON.parse(JSON.stringify(user));
+        await auditService.logAction(adminId, 'Update User Status (Admin)', 'User', id, 'System', beforeState, afterState, 'warning');
         return user;
     }
 
-    async deleteUser(id: string): Promise<void> {
+    async deleteUser(id: string, adminId: string): Promise<void> {
+        const userToDelete = await userRepository.findById(id);
+        if (!userToDelete) throw new AppError('User not found', 404);
+        const beforeState = JSON.parse(JSON.stringify(userToDelete));
+
         const user = await userRepository.deleteById(id);
         if (!user) throw new AppError('User not found', 404);
+
+        await auditService.logAction(adminId, 'Delete User (Admin)', 'User', id, 'System', beforeState, null, 'destructive');
     }
 
     async updateEmployeeRole(id: string, role: string): Promise<any> {
@@ -122,9 +136,16 @@ export class AdminService {
             .sort({ date: -1 });
     }
 
-    async updateAccountStatus(id: string, status: string): Promise<any> {
+    async updateAccountStatus(id: string, status: string, adminId: string): Promise<any> {
+        const accountToUpdate = await accountRepository.findById(id);
+        if (!accountToUpdate) throw new AppError('Account not found', 404);
+        const beforeState = JSON.parse(JSON.stringify(accountToUpdate));
+
         const account = await accountRepository.updateById(id, { status } as any);
         if (!account) throw new AppError('Account not found', 404);
+
+        const afterState = JSON.parse(JSON.stringify(account));
+        await auditService.logAction(adminId, 'Update Account Status (Admin)', 'Account', id, 'System', beforeState, afterState, status === 'frozen' ? 'destructive' : 'warning');
         return account;
     }
 
@@ -153,8 +174,18 @@ export class AdminService {
         return config;
     }
 
-    async updateSystemConfig(data: any): Promise<any> {
-        return await systemConfigRepository.model.findOneAndUpdate({}, data, { new: true, upsert: true });
+    async updateSystemConfig(data: any, adminId: string): Promise<any> {
+        let config = await systemConfigRepository.model.findOne();
+        if (!config) {
+            config = (await systemConfigRepository.create({})) as any;
+        }
+        const beforeState = JSON.parse(JSON.stringify(config));
+
+        const updatedConfig = await systemConfigRepository.model.findOneAndUpdate({}, data, { new: true, upsert: true });
+        const afterState = JSON.parse(JSON.stringify(updatedConfig));
+
+        await auditService.logAction(adminId, 'Update System Config (Admin)', 'SystemConfig', updatedConfig?._id?.toString(), 'System', beforeState, afterState, 'security');
+        return updatedConfig;
     }
 
     async getBlacklistedIPs(): Promise<any[]> {

@@ -14,12 +14,14 @@ export const getAllUsers = catchAsync(async (req: Request, res: Response, next: 
 });
 
 export const updateUserStatus = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
-    const user = await adminService.updateUserStatus(req.params.id as string, req.body.status);
+    const adminId = (req as any).user._id.toString();
+    const user = await adminService.updateUserStatus(req.params.id as string, req.body.status, adminId);
     res.status(200).json({ status: 'success', data: user });
 });
 
 export const deleteUser = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
-    await adminService.deleteUser(req.params.id as string);
+    const adminId = (req as any).user._id.toString();
+    await adminService.deleteUser(req.params.id as string, adminId);
     res.status(204).json({ status: 'success', data: null });
 });
 
@@ -46,7 +48,8 @@ export const getFlaggedTransactions = catchAsync(async (req: Request, res: Respo
 });
 
 export const updateAccountStatus = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
-    const account = await adminService.updateAccountStatus(req.params.id as string, req.body.status);
+    const adminId = (req as any).user._id.toString();
+    const account = await adminService.updateAccountStatus(req.params.id as string, req.body.status, adminId);
     res.status(200).json({ status: 'success', data: account });
 });
 
@@ -61,7 +64,8 @@ export const getSystemConfig = catchAsync(async (req: Request, res: Response, ne
 });
 
 export const updateSystemConfig = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
-    const config = await adminService.updateSystemConfig(req.body);
+    const adminId = (req as any).user._id.toString();
+    const config = await adminService.updateSystemConfig(req.body, adminId);
     res.status(200).json({ status: 'success', data: config });
 });
 
