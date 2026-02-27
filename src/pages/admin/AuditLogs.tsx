@@ -12,6 +12,11 @@ export default function AuditLogs() {
     const [typeFilter, setTypeFilter] = useState('all');
     const [logs, setLogs] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [expandedLogId, setExpandedLogId] = useState<string | null>(null);
+
+    const toggleExpand = (id: string) => {
+        setExpandedLogId(prev => prev === id ? null : id);
+    };
 
     useEffect(() => {
         const fetchLogs = async () => {
@@ -91,8 +96,9 @@ export default function AuditLogs() {
                             </div>
                         ) : logs.length > 0 ? (
                             logs.map((log) => {
-                                const user = log.adminId;
+                                const user = log.userId;
                                 const derivedType = log.severity || 'info';
+                                const isExpanded = expandedLogId === (log.id || log._id);
 
                                 return (
                                     <div key={log.id || log._id} className="ml-6 relative">
@@ -100,20 +106,58 @@ export default function AuditLogs() {
                                             {getIcon(derivedType)}
                                         </div>
 
-                                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 bg-secondary/5 border border-border/10 p-4 rounded-xl hover:bg-secondary/10 transition-colors">
-                                            <div>
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    <span className="font-semibold text-sm">{log.action}</span>
-                                                    <span className="text-[10px] bg-secondary/30 px-2 py-0.5 rounded-full font-mono text-muted-foreground">{log.ipAddress || 'Unknown IP'}</span>
+                                        <div
+                                            className="flex flex-col gap-2 bg-secondary/5 border border-border/10 p-4 rounded-xl hover:bg-secondary/10 transition-colors cursor-pointer"
+                                            onClick={() => toggleExpand(log.id || log._id)}
+                                        >
+                                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
+                                                <div>
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        <span className="font-semibold text-sm">{log.action}</span>
+                                                        <span className="text-[10px] bg-secondary/30 px-2 py-0.5 rounded-full font-mono text-muted-foreground">{log.ipAddress || 'Unknown IP'}</span>
+                                                        {log.entityType && (
+                                                            <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-full font-semibold uppercase">{log.entityType}</span>
+                                                        )}
+                                                    </div>
+                                                    <p className="text-sm text-foreground/80">{log.details}</p>
+                                                    <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
+                                                        <span>User: {user ? `${user.name || user.fullName} (${user.email})` : 'System'}</span>
+                                                        {log.entityId && <span>• Target ID: {log.entityId}</span>}
+                                                    </div>
                                                 </div>
-                                                <p className="text-sm text-foreground/80">{log.details}</p>
-                                                <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
-                                                    <span>Admin: {user ? user.email : 'System'}</span>
+                                                <div className="text-left md:text-right min-w-[140px] flex md:flex-col justify-between items-center md:items-end">
+                                                    <span className="text-xs font-mono text-muted-foreground">{new Date(log.timestamp).toLocaleString()}</span>
+                                                    <span className="text-xs text-primary mt-1">{isExpanded ? 'Collapse' : 'View Details'}</span>
                                                 </div>
                                             </div>
-                                            <div className="text-right min-w-[140px]">
-                                                <span className="text-xs font-mono">{new Date(log.timestamp).toLocaleString()}</span>
-                                            </div>
+
+                                            {/* Expandable JSON State Diff */}
+                                            {isExpanded && (log.beforeState || log.afterState) && (
+                                                <div className="mt-4 pt-4 border-t border-border/10 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                    {log.beforeState && (
+                                                        <div className="bg-background/50 rounded-lg p-3 overflow-x-auto text-[10px] sm:text-xs">
+                                                            <div className="font-bold text-muted-foreground mb-2 flex items-center justify-between">
+                                                                <span>BEFORE STATE</span>
+                                                                <span className="w-2 h-2 rounded-full bg-destructive/50"></span>
+                                                            </div>
+                                                            <pre className="text-destructive/80 font-mono">
+                                                                {JSON.stringify(log.beforeState, null, 2)}
+                                                            </pre>
+                                                        </div>
+                                                    )}
+                                                    {log.afterState && (
+                                                        <div className="bg-background/50 rounded-lg p-3 overflow-x-auto text-[10px] sm:text-xs">
+                                                            <div className="font-bold text-muted-foreground mb-2 flex items-center justify-between">
+                                                                <span>AFTER STATE</span>
+                                                                <span className="w-2 h-2 rounded-full bg-success/50"></span>
+                                                            </div>
+                                                            <pre className="text-success/80 font-mono">
+                                                                {JSON.stringify(log.afterState, null, 2)}
+                                                            </pre>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 );
