@@ -55,6 +55,7 @@ const getNavItems = (role: UserRole): NavItem[] => {
         { label: 'Accounts', path: '/admin/accounts', icon: ClipboardList },
         { label: 'Fraud Monitor', path: '/admin/fraud', icon: AlertTriangle },
         { label: 'Audit Logs', path: '/admin/audit', icon: History },
+        { label: 'Regulatory Reports', path: '/admin/reports', icon: FileText },
         { label: 'Configuration', path: '/admin/config', icon: Settings },
       ];
   }

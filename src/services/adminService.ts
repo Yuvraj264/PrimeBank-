@@ -52,6 +52,13 @@ export const adminService = {
         return response.data;
     },
 
+    downloadReport: async (type: string) => {
+        const response = await api.get(`/compliance/reports/${type}?format=csv`, {
+            responseType: 'blob'
+        });
+        return response.data;
+    },
+
     updateEmployeeRole: async (id: string, role: string) => {
         const response = await api.patch(`/admin/employees/${id}/role`, { role });
         return response.data;

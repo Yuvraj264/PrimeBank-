@@ -40,6 +40,7 @@ import AccountManagement from './pages/admin/AccountManagement';
 import FraudMonitor from './pages/admin/FraudMonitor';
 import AuditLogs from './pages/admin/AuditLogs';
 import SystemConfig from './pages/admin/SystemConfig';
+import RegulatoryReports from './pages/admin/RegulatoryReports';
 
 const queryClient = new QueryClient();
 
@@ -204,6 +205,11 @@ const App = () => (
             <Route path="/admin/audit" element={
               <ProtectedRoute allowedRoles={['admin']}>
                 <AuditLogs />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/reports" element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <RegulatoryReports />
               </ProtectedRoute>
             } />
             <Route path="/admin/config" element={
