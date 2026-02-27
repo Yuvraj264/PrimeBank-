@@ -58,6 +58,14 @@ const getNavItems = (role: UserRole): NavItem[] => {
         { label: 'Regulatory Reports', path: '/admin/reports', icon: FileText },
         { label: 'Configuration', path: '/admin/config', icon: Settings },
       ];
+    case 'merchant':
+      return [
+        { label: 'Business Hub', path: '/merchant', icon: LayoutDashboard },
+        { label: 'API Banking', path: '/merchant/api', icon: Settings },
+        { label: 'Bulk Payroll', path: '/merchant/payroll', icon: FileText },
+        { label: 'Vendors', path: '/merchant/vendors', icon: Users },
+        { label: 'GST Summary', path: '/merchant/gst', icon: Receipt },
+      ];
   }
 };
 

@@ -42,6 +42,12 @@ import AuditLogs from './pages/admin/AuditLogs';
 import SystemConfig from './pages/admin/SystemConfig';
 import RegulatoryReports from './pages/admin/RegulatoryReports';
 
+// Merchant Routes
+import MerchantDashboard from './pages/merchant/MerchantDashboard';
+import APIBanking from './pages/merchant/APIBanking';
+import PayrollBulkFlow from './pages/merchant/PayrollBulkFlow';
+import VendorDirectory from './pages/merchant/VendorDirectory';
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -215,6 +221,33 @@ const App = () => (
             <Route path="/admin/config" element={
               <ProtectedRoute allowedRoles={['admin']}>
                 <SystemConfig />
+              </ProtectedRoute>
+            } />
+
+            {/* Merchant Routes */}
+            <Route path="/merchant" element={
+              <ProtectedRoute allowedRoles={['merchant']}>
+                <MerchantDashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/merchant/api" element={
+              <ProtectedRoute allowedRoles={['merchant', 'admin']}>
+                <APIBanking />
+              </ProtectedRoute>
+            } />
+            <Route path="/merchant/payroll" element={
+              <ProtectedRoute allowedRoles={['merchant']}>
+                <PayrollBulkFlow />
+              </ProtectedRoute>
+            } />
+            <Route path="/merchant/vendors" element={
+              <ProtectedRoute allowedRoles={['merchant']}>
+                <VendorDirectory />
+              </ProtectedRoute>
+            } />
+            <Route path="/merchant/gst" element={
+              <ProtectedRoute allowedRoles={['merchant']}>
+                <MerchantDashboard />
               </ProtectedRoute>
             } />
 
