@@ -37,12 +37,13 @@ export const adminService = {
     },
 
     getFlaggedTransactions: async () => {
-        const response = await api.get('/admin/transactions/flagged');
+        const response = await api.get('/compliance/suspicious');
         return response.data;
     },
 
     resolveFraudAlert: async (id: string, action: 'cleared' | 'blocked') => {
-        const response = await api.patch(`/admin/transactions/${id}/resolve`, { action });
+        const status = action === 'cleared' ? 'approved' : 'blocked';
+        const response = await api.patch(`/compliance/review/${id}`, { status, adminRemarks: `Action taken via admin portal: ${action}` });
         return response.data;
     },
 

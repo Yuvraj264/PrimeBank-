@@ -92,21 +92,26 @@ export default function FraudMonitor() {
                                                 <AlertTriangle className="w-5 h-5" />
                                             </div>
                                             <div>
-                                                <h3 className="font-bold text-lg">Suspicious Activity Detected</h3>
-                                                <p className="text-xs text-muted-foreground">{new Date(alert.date || alert.timestamp).toLocaleString()} • TXN ID: {alert.id || alert._id}</p>
+                                                <h3 className="font-bold text-lg inline-block uppercase bg-destructive/10 text-destructive px-2 py-0.5 rounded-sm">{alert.ruleFlagged?.replace('_', ' ') || 'SUSPICIOUS ACTIVITY'}</h3>
+                                                <p className="text-xs text-muted-foreground mt-1">{new Date(alert.createdAt || alert.date).toLocaleString()} • REF: {alert._id}</p>
                                             </div>
                                         </div>
                                         <div className="text-right">
-                                            <span className="text-2xl font-bold text-destructive">${alert.amount.toLocaleString()}</span>
+                                            {alert.metadata?.amount && (
+                                                <span className="text-2xl font-bold text-destructive">${Number(alert.metadata.amount).toLocaleString()}</span>
+                                            )}
                                             <div className="flex items-center justify-end gap-1 text-xs font-semibold text-destructive mt-1">
-                                                <span>Risk Score: {alert.riskScore}/100</span>
+                                                <span>Risk Score: {alert.userId?.riskScore || 0}/100</span>
                                             </div>
                                         </div>
                                     </div>
 
                                     <div className="p-4 bg-secondary/20 rounded-lg mb-6 text-sm">
-                                        <p><span className="font-semibold text-muted-foreground">Description:</span> {alert.description}</p>
-                                        <p className="mt-2 text-muted-foreground">User: {alert.userId?.name} ({alert.userId?.email})</p>
+                                        <p><span className="font-semibold text-muted-foreground">Severity:</span> <span className="uppercase">{alert.severity}</span></p>
+                                        {alert.metadata && Object.keys(alert.metadata).map(key => (
+                                            <p key={key} className="capitalize"><span className="font-semibold text-muted-foreground">{key}:</span> {alert.metadata[key]}</p>
+                                        ))}
+                                        <p className="mt-2 pt-2 border-t border-secondary/50 text-muted-foreground">User: {alert.userId?.fullName || alert.userId?.name} ({alert.userId?.email}) • Profile Risk: <span className="uppercase">{alert.userId?.riskLevel || 'Unknown'}</span></p>
                                     </div>
 
                                     <div className="flex gap-3">
@@ -146,7 +151,7 @@ export default function FraudMonitor() {
                                 </div>
                                 <div className="flex justify-between items-center text-sm">
                                     <span className="text-muted-foreground">High Priority</span>
-                                    <span className="font-bold text-destructive">{alerts.filter(a => a.riskScore > 80).length}</span>
+                                    <span className="font-bold text-destructive">{alerts.filter(a => a.severity === 'critical' || a.severity === 'high').length}</span>
                                 </div>
                             </div>
                         </GlassCard>
