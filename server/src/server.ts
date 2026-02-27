@@ -19,6 +19,10 @@ import investmentRoutes from './routes/investmentRoutes';
 import notificationRoutes from './routes/notificationRoutes';
 import supportRoutes from './routes/supportRoutes';
 import complianceRoutes from './routes/complianceRoutes';
+import apiBankingRoutes from './routes/apiBankingRoutes';
+import vendorRoutes from './routes/vendorRoutes';
+import bulkProcessingRoutes from './routes/bulkProcessingRoutes';
+import gstRoutes from './routes/gstRoutes';
 import errorHandler from './middlewares/errorHandler';
 import dotenv from 'dotenv';
 import { AppError } from './utils/appError';
@@ -59,6 +63,10 @@ app.use('/api/v1/investments', investmentRoutes);
 app.use('/api/v1/notifications', notificationRoutes);
 app.use('/api/v1/support', supportRoutes);
 app.use('/api/v1/compliance', complianceRoutes);
+app.use('/api/v1/business/api', apiBankingRoutes);
+app.use('/api/v1/business/vendors', vendorRoutes);
+app.use('/api/v1/business/bulk', bulkProcessingRoutes);
+app.use('/api/v1/business/gst', gstRoutes);
 
 app.use((req, res, next) => {
     next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));
