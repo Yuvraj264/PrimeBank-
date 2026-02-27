@@ -3,6 +3,7 @@ import { sanctionListRepository } from '../repositories/SanctionListRepository';
 import { userRepository } from '../repositories/UserRepository';
 import { transactionRepository } from '../repositories/TransactionRepository';
 import { AppError } from '../utils/appError';
+import { auditService } from './AuditService';
 
 export class ComplianceService {
 
@@ -67,8 +68,11 @@ export class ComplianceService {
         if (blockTransaction || user.riskLevel === 'high') {
             // Freeze user automatically on critical hits
             if (blockTransaction) {
+                const beforeState = JSON.parse(JSON.stringify(user));
                 user.accountStatus = 'frozen';
                 await user.save();
+                const afterState = JSON.parse(JSON.stringify(user));
+                await auditService.logAction(undefined, 'Auto Freeze Account (Compliance)', 'User', userId, 'System', beforeState, afterState, 'destructive');
             }
             return { isBlocked: true, reason: 'Transaction blocked due to compliance alerts' };
         }
@@ -93,6 +97,7 @@ export class ComplianceService {
         const user = await userRepository.findById(userId);
         if (!user) return;
 
+        const beforeState = JSON.parse(JSON.stringify(user));
         let riskBump = 0;
         for (const flag of newFlags) {
             if (flag.severity === 'critical') riskBump += 40;
@@ -111,6 +116,11 @@ export class ComplianceService {
         else user.riskLevel = 'low';
 
         await user.save();
+        const afterState = JSON.parse(JSON.stringify(user));
+
+        if (beforeState.riskScore !== afterState.riskScore) {
+            await auditService.logAction(undefined, 'Automated Risk Bump', 'User', userId, 'System', beforeState, afterState, 'warning');
+        }
     }
 
     // Admin Operations
@@ -126,7 +136,13 @@ export class ComplianceService {
         const activity = await suspiciousActivityRepository.findById(activityId);
         if (!activity) throw new AppError('Activity not found', 404);
 
-        return await suspiciousActivityRepository.updateById(activityId, { status, adminRemarks } as any);
+        const beforeState = JSON.parse(JSON.stringify(activity));
+        const updatedActivity = await suspiciousActivityRepository.updateById(activityId, { status, adminRemarks } as any);
+        const afterState = JSON.parse(JSON.stringify(updatedActivity));
+
+        await auditService.logAction(undefined, 'Admin Reviewed Suspicious Activity', 'SuspiciousActivity', activityId, 'System', beforeState, afterState, 'warning');
+
+        return updatedActivity;
     }
 
     async addToSanctionList(data: any) {
@@ -134,7 +150,15 @@ export class ComplianceService {
     }
 
     async updateUserRisk(userId: string, updates: { isPEP?: boolean; riskScore?: number; riskLevel?: 'low' | 'medium' | 'high' }) {
-        return await userRepository.updateById(userId, updates as any);
+        const user = await userRepository.findById(userId);
+        const beforeState = JSON.parse(JSON.stringify(user));
+
+        const updatedUser = await userRepository.updateById(userId, updates as any);
+        const afterState = JSON.parse(JSON.stringify(updatedUser));
+
+        await auditService.logAction(undefined, 'Admin Updated User Risk', 'User', userId, 'System', beforeState, afterState, 'warning');
+
+        return updatedUser;
     }
 }
 

@@ -6,6 +6,8 @@ export class AuditService {
             await auditLogRepository.create({
                 userId: userId as any,
                 action: 'User Login',
+                entityType: 'User',
+                entityId: userId,
                 severity: 'info',
                 ipAddress,
                 details: 'User logged in successfully'
@@ -20,14 +22,40 @@ export class AuditService {
             await auditLogRepository.create({
                 userId: userId as any,
                 action,
-                targetId: targetId as any,
-                targetModel: 'Transaction',
+                entityType: 'Transaction',
+                entityId: targetId,
                 severity: 'info',
                 details,
                 ipAddress
             });
         } catch (error) {
             console.error('Failed to log transaction:', error);
+        }
+    }
+
+    async logAction(
+        userId: string | undefined, // undefined for system actions
+        action: string,
+        entityType: string,
+        entityId: string,
+        ipAddress: string,
+        beforeState?: any,
+        afterState?: any,
+        severity: 'info' | 'warning' | 'destructive' | 'security' = 'info'
+    ): Promise<void> {
+        try {
+            await auditLogRepository.create({
+                userId: userId as any,
+                action,
+                entityType,
+                entityId,
+                ipAddress,
+                beforeState,
+                afterState,
+                severity
+            });
+        } catch (error) {
+            console.error(`Failed to log audit action for ${entityType}:`, error);
         }
     }
 }

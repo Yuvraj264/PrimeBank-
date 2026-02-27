@@ -4,6 +4,7 @@ import { cardRepository } from '../repositories/CardRepository';
 import { AppError } from '../utils/appError';
 import jwt from 'jsonwebtoken';
 import { IUser } from '../models/User';
+import { auditService } from './AuditService';
 
 export class AuthService {
     private signAccessToken(id: string): string {
@@ -154,10 +155,16 @@ export class AuthService {
 
         updates.profileCompleted = true;
 
+        const user = await userRepository.findById(userId);
+        const beforeState = JSON.parse(JSON.stringify(user));
+
         const updatedUser = await userRepository.updateById(userId, updates);
         if (!updatedUser) {
             throw new AppError('User not found', 404);
         }
+
+        const afterState = JSON.parse(JSON.stringify(updatedUser));
+        await auditService.logAction(userId, 'Update Profile', 'User', userId, 'System', beforeState, afterState, 'info');
 
         // Sync name with card if updated
         if (updates.name) {
@@ -174,8 +181,12 @@ export class AuthService {
         const user = await userRepository.findById(userId);
         if (!user) throw new AppError('User not found', 404);
 
+        const beforeState = JSON.parse(JSON.stringify(user));
         user.preferences = { ...user.preferences, ...preferences };
         await user.save();
+        const afterState = JSON.parse(JSON.stringify(user));
+
+        await auditService.logAction(userId, 'Update Preferences', 'User', userId, 'System', beforeState, afterState, 'info');
         return user;
     }
 
@@ -183,9 +194,13 @@ export class AuthService {
         const user = await userRepository.findById(userId);
         if (!user) throw new AppError('User not found', 404);
 
+        const beforeState = JSON.parse(JSON.stringify(user));
         user.accountStatus = 'closure_requested';
         // Log the reason or save to a dedicated table if needed
         await user.save();
+        const afterState = JSON.parse(JSON.stringify(user));
+
+        await auditService.logAction(userId, 'Request Account Closure', 'User', userId, 'System', beforeState, afterState, 'warning');
         return user;
     }
 }

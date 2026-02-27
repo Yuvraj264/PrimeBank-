@@ -17,7 +17,8 @@ export const logAction = (action: string) => {
                     await AuditLog.create({
                         userId: req.user?._id as any,
                         action,
-                        targetId: req.params.id as any, // Assuming ID is in params for resource actions
+                        entityType: 'API',
+                        entityId: req.params.id as any, // Assuming ID is in params for resource actions
                         details: `Method: ${req.method}, URL: ${req.originalUrl}`,
                         ipAddress: req.ip
                     });
