@@ -1,5 +1,5 @@
 import express from 'express';
-import { getPendingReviews, getHighRiskUsers, reviewActivity, addToSanctionList, updateUserRiskProfile } from '../controllers/complianceController';
+import { getPendingReviews, getHighRiskUsers, reviewActivity, addToSanctionList, updateUserRiskProfile, generateReport } from '../controllers/complianceController';
 import { protect, restrictTo } from '../middlewares/authMiddleware';
 
 const router = express.Router();
@@ -12,5 +12,7 @@ router.get('/high-risk-users', getHighRiskUsers);
 router.post('/sanctions', addToSanctionList);
 router.patch('/review/:id', reviewActivity);
 router.patch('/user/:id/risk', updateUserRiskProfile);
+
+router.get('/reports/:type', generateReport);
 
 export default router;
