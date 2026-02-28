@@ -1,4 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { loanService } from '@/services/loanService';
+import { Loan } from '@/types';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import GlassCard from '@/components/shared/GlassCard';
 import { Button } from '@/components/ui/button';
@@ -9,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
     Home, Car, GraduationCap, Briefcase, Download, DollarSign, Wallet,
-    Calculator, CheckCircle2, AlertCircle, Percent, Calendar, RefreshCcw, Landmark
+    Calculator, CheckCircle2, AlertCircle, Percent, Calendar, RefreshCcw, Landmark, BrainCircuit, Activity, FileSpreadsheet
 } from 'lucide-react';
 import { useAppSelector } from '@/store';
 import { format, addMonths } from 'date-fns';
@@ -53,7 +55,20 @@ const mockActiveLoans = [
 
 export default function Loans() {
     const { user } = useAppSelector((s) => s.auth);
-    const [loans, setLoans] = useState(mockActiveLoans);
+    const [loans, setLoans] = useState<Loan[]>([]);
+
+    useEffect(() => {
+        loadLoans();
+    }, []);
+
+    const loadLoans = async () => {
+        try {
+            const data = await loanService.getMyLoans();
+            setLoans(data);
+        } catch (error) {
+            console.error("Failed to fetch loans:", error);
+        }
+    };
 
     // --- Calculator State ---
     const [calcPrincipal, setCalcPrincipal] = useState(50000);
@@ -72,6 +87,16 @@ export default function Loans() {
     // --- Application State ---
     const [appStep, setAppStep] = useState(1);
     const [appType, setAppType] = useState('personal');
+    const [applyPrincipal, setApplyPrincipal] = useState('10000');
+    const [applyTenure, setApplyTenure] = useState('36');
+    const [applyEmployment, setApplyEmployment] = useState('salaried');
+    const [applyPurpose, setApplyPurpose] = useState('');
+
+    // Collateral State
+    const [collateralType, setCollateralType] = useState('none');
+    const [collateralValue, setCollateralValue] = useState('');
+
+    const [showEmiScheduleId, setShowEmiScheduleId] = useState<string | null>(null);
 
     const formatCurrency = (amount: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
 
@@ -121,16 +146,37 @@ export default function Loans() {
         }, 1000);
     };
 
-    const handleApplyNext = (e: React.FormEvent) => {
+    const handleApplyNext = async (e: React.FormEvent) => {
         e.preventDefault();
         if (appStep < 3) setAppStep(prev => prev + 1);
         else {
             setIsProcessing(true);
-            setTimeout(() => {
-                setIsProcessing(false);
-                toast.success("Application submitted successfully! Our team will contact you.");
+            try {
+                const payload: any = {
+                    loanType: appType,
+                    principalAmount: Number(applyPrincipal),
+                    tenureMonths: Number(applyTenure),
+                    monthlyIncome: Number(income),
+                    employmentStatus: applyEmployment,
+                };
+
+                if (collateralType !== 'none' && Number(collateralValue) > 0) {
+                    payload.collateral = {
+                        assetType: collateralType,
+                        assetValue: Number(collateralValue),
+                        valuationDate: new Date()
+                    };
+                }
+
+                await loanService.applyLoan(payload);
+                toast.success("Application submitted successfully! Engine scored your profile.");
                 setAppStep(1);
-            }, 2000);
+                loadLoans();
+            } catch (error: any) {
+                toast.error(error.response?.data?.message || "Failed to submit loan");
+            } finally {
+                setIsProcessing(false);
+            }
         }
     };
 
@@ -159,10 +205,9 @@ export default function Loans() {
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                 {loans.map(loan => {
                                     const details = getLoanTypeDetails(loan.type);
-                                    const progress = (loan.monthsCompleted / loan.tenureMonths) * 100;
 
                                     return (
-                                        <GlassCard key={loan.id} className="p-6 border-border/50 relative overflow-hidden group">
+                                        <GlassCard key={loan._id || loan.id} className="p-6 border-border/50 relative overflow-hidden group">
                                             {/* decorative background blur */}
                                             <div className="absolute -top-10 -right-10 w-32 h-32 bg-primary/5 rounded-full blur-3xl group-hover:bg-primary/10 transition-colors" />
 
@@ -173,62 +218,117 @@ export default function Loans() {
                                                     </div>
                                                     <div>
                                                         <h3 className="font-semibold text-lg">{details.name}</h3>
-                                                        <p className="text-xs text-muted-foreground font-mono">{loan.id}</p>
+                                                        <p className="text-xs text-muted-foreground font-mono">{loan._id || loan.id}</p>
                                                     </div>
                                                 </div>
-                                                <span className="px-2 py-1 text-xs rounded-full bg-success/10 text-success font-medium border border-success/20 shadow-sm flex items-center gap-1">
-                                                    <CheckCircle2 className="w-3 h-3" /> Active
+                                                <span className={`px-2 py-1 text-xs rounded-full font-medium border shadow-sm flex items-center gap-1 ${loan.status === 'approved' ? 'bg-success/10 text-success border-success/20' :
+                                                    loan.status === 'rejected' ? 'bg-destructive/10 text-destructive border-destructive/20' :
+                                                        'bg-orange-500/10 text-orange-500 border-orange-500/20'
+                                                    }`}>
+                                                    <CheckCircle2 className="w-3 h-3" /> {loan.status.toUpperCase()}
                                                 </span>
                                             </div>
 
                                             <div className="grid grid-cols-2 gap-y-6 gap-x-4 mb-6">
                                                 <div>
-                                                    <p className="text-sm text-muted-foreground">Outstanding Principal</p>
-                                                    <p className="text-2xl font-bold tracking-tight text-foreground">{formatCurrency(loan.outstandingPrincipal)}</p>
+                                                    <p className="text-sm text-muted-foreground">Principal</p>
+                                                    <p className="text-2xl font-bold tracking-tight text-foreground">{formatCurrency(loan.principalAmount || loan.amount || 0)}</p>
                                                 </div>
                                                 <div>
                                                     <p className="text-sm text-muted-foreground">Monthly EMI</p>
-                                                    <p className="text-xl font-bold tracking-tight text-foreground/90">{formatCurrency(loan.emi)}</p>
+                                                    <p className="text-xl font-bold tracking-tight text-foreground/90">{formatCurrency(loan.emiAmount || loan.monthlyEmi || 0)}</p>
                                                 </div>
                                                 <div>
                                                     <p className="text-sm text-muted-foreground">Interest Rate</p>
                                                     <p className="text-lg font-medium text-foreground/80 flex items-center gap-1"><Percent className="w-4 h-4 text-primary" /> {loan.interestRate}%</p>
                                                 </div>
                                                 <div>
-                                                    <p className="text-sm text-muted-foreground">Next Due Date</p>
-                                                    <p className="text-lg font-medium text-foreground/80 flex items-center gap-1"><Calendar className="w-4 h-4 text-primary" /> {format(new Date(loan.nextDueDate), 'd MMM yyyy')}</p>
+                                                    <p className="text-sm text-muted-foreground">Remaining Balance</p>
+                                                    <p className="text-lg font-bold text-primary flex items-center gap-1">{formatCurrency(loan.remainingBalance || 0)}</p>
                                                 </div>
                                             </div>
 
-                                            <div className="mb-6">
-                                                <div className="flex justify-between text-xs text-muted-foreground mb-2">
-                                                    <span>Tenure Progress</span>
-                                                    <span>{loan.monthsCompleted} / {loan.tenureMonths} Months</span>
+                                            {loan.riskProfile && (
+                                                <div className="mb-6 p-4 rounded-xl border border-primary/20 bg-primary/5">
+                                                    <div className="flex items-center gap-2 mb-3">
+                                                        <BrainCircuit className="w-4 h-4 text-primary" />
+                                                        <span className="text-sm font-semibold">Risk Engine Diagnostics</span>
+                                                    </div>
+                                                    <div className="grid grid-cols-3 gap-2 text-center">
+                                                        <div>
+                                                            <p className="text-xs text-muted-foreground">Approval Odds</p>
+                                                            <p className="font-mono text-sm">{loan.riskProfile.approvalProbability}%</p>
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-xs text-muted-foreground">Risk Score</p>
+                                                            <p className="font-mono text-sm">{loan.riskProfile.riskScore}</p>
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-xs text-muted-foreground">Engine Cap</p>
+                                                            <p className="font-mono text-sm text-primary">{formatCurrency(loan.riskProfile.maxLoanLimit)}</p>
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                                <div className="h-2 w-full bg-secondary/50 rounded-full overflow-hidden">
-                                                    <div className="h-full bg-primary rounded-full transition-all duration-1000" style={{ width: `${progress}%` }} />
+                                            )}
+
+                                            {loan.emiSchedule && loan.emiSchedule.length > 0 && (
+                                                <div className="mb-6">
+                                                    <div className="flex justify-between items-center text-xs text-muted-foreground mb-2">
+                                                        <span>Amortization Progress</span>
+                                                        <span>{loan.tenureMonths || loan.tenure} Months</span>
+                                                    </div>
+                                                    <div className="h-2 w-full bg-secondary/50 rounded-full overflow-hidden">
+                                                        <div className="h-full bg-primary rounded-full transition-all duration-1000" style={{ width: `${(1 - ((loan.remainingBalance || 0) / (loan.principalAmount || 1))) * 100}%` }} />
+                                                    </div>
                                                 </div>
-                                            </div>
+                                            )}
 
                                             <div className="flex gap-3 pt-4 border-t border-border/50">
                                                 <Button
-                                                    onClick={() => setSelectedLoanForPrepay(loan.id)}
+                                                    onClick={() => setSelectedLoanForPrepay(loan._id || loan.id)}
                                                     className="flex-1 shadow-[0_0_15px_rgba(0,255,255,0.05)] hover:shadow-[0_0_20px_rgba(0,255,255,0.15)] bg-primary/20 hover:bg-primary/30 text-primary border border-primary/20"
+                                                    disabled={loan.status !== 'approved'}
                                                 >
                                                     <DollarSign className="w-4 h-4 mr-1.5" /> Prepay
                                                 </Button>
                                                 <Button
                                                     variant="secondary"
-                                                    onClick={() => handleDownloadStatement(loan.id)}
+                                                    onClick={() => setShowEmiScheduleId(showEmiScheduleId === loan.id ? null : (loan._id || loan.id))}
                                                     className="flex-1 bg-secondary/50 hover:bg-secondary"
                                                 >
-                                                    <Download className="w-4 h-4 mr-1.5" /> Statement
+                                                    <FileSpreadsheet className="w-4 h-4 mr-1.5" /> EMI Table
                                                 </Button>
                                             </div>
 
+                                            {/* EMI Schedule Inline Table */}
+                                            {showEmiScheduleId === (loan._id || loan.id) && loan.emiSchedule && (
+                                                <div className="mt-4 pt-4 border-t border-border/50 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+                                                    <table className="w-full text-xs text-left">
+                                                        <thead className="text-muted-foreground sticky top-0 bg-background/90 backdrop-blur-sm z-10">
+                                                            <tr>
+                                                                <th className="pb-2">Mo.</th>
+                                                                <th className="pb-2">Principal</th>
+                                                                <th className="pb-2">Interest</th>
+                                                                <th className="pb-2 text-right">Balance</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody className="divide-y divide-border/30">
+                                                            {loan.emiSchedule.map((emi) => (
+                                                                <tr key={emi.month} className="hover:bg-secondary/20">
+                                                                    <td className="py-2 text-muted-foreground">{emi.month}</td>
+                                                                    <td className="py-2 text-foreground/80">{formatCurrency(emi.principalComponent)}</td>
+                                                                    <td className="py-2 text-foreground/80">{formatCurrency(emi.interestComponent)}</td>
+                                                                    <td className="py-2 text-right font-mono text-primary/80">{formatCurrency(emi.remainingBalance)}</td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            )}
+
                                             {/* Prepayment Modal overlay inside card */}
                                             <AnimatePresence>
-                                                {selectedLoanForPrepay === loan.id && (
+                                                {selectedLoanForPrepay === (loan._id || loan.id) && (
                                                     <motion.div
                                                         initial={{ opacity: 0, scale: 0.95 }}
                                                         animate={{ opacity: 1, scale: 1 }}
@@ -246,7 +346,7 @@ export default function Loans() {
                                                                     placeholder="e.g. 5000"
                                                                     value={prepayAmount}
                                                                     onChange={e => setPrepayAmount(e.target.value)}
-                                                                    max={loan.outstandingPrincipal}
+                                                                    max={loan.remainingBalance || loan.outstandingPrincipal || 0}
                                                                     className="h-12 bg-secondary/30 text-lg font-mono"
                                                                 />
                                                             </div>
@@ -326,24 +426,26 @@ export default function Loans() {
                                                     <div className="space-y-4">
                                                         <div className="space-y-2">
                                                             <Label>Requested Amount ($)</Label>
-                                                            <Input type="number" required placeholder="10000" className="h-12 text-lg font-mono bg-background/50" />
+                                                            <Input type="number" required placeholder="10000" value={applyPrincipal} onChange={e => setApplyPrincipal(e.target.value)} className="h-12 text-lg font-mono bg-background/50" />
                                                         </div>
                                                         <div className="grid grid-cols-2 gap-4">
                                                             <div className="space-y-2">
                                                                 <Label>Preferred Tenure (Months)</Label>
-                                                                <Select defaultValue="36">
+                                                                <Select value={applyTenure} onValueChange={setApplyTenure}>
                                                                     <SelectTrigger className="h-12"><SelectValue /></SelectTrigger>
                                                                     <SelectContent>
                                                                         <SelectItem value="12">12 Months</SelectItem>
                                                                         <SelectItem value="24">24 Months</SelectItem>
                                                                         <SelectItem value="36">36 Months</SelectItem>
                                                                         <SelectItem value="60">60 Months</SelectItem>
+                                                                        <SelectItem value="120">120 Months</SelectItem>
+                                                                        <SelectItem value="240">240 Months</SelectItem>
                                                                     </SelectContent>
                                                                 </Select>
                                                             </div>
                                                             <div className="space-y-2">
                                                                 <Label>Employment Status</Label>
-                                                                <Select defaultValue="salaried">
+                                                                <Select value={applyEmployment} onValueChange={setApplyEmployment}>
                                                                     <SelectTrigger className="h-12"><SelectValue /></SelectTrigger>
                                                                     <SelectContent>
                                                                         <SelectItem value="salaried">Salaried</SelectItem>
@@ -352,9 +454,36 @@ export default function Loans() {
                                                                 </Select>
                                                             </div>
                                                         </div>
+
+                                                        {/* Advanced Risk Engine Modifiers */}
+                                                        <div className="pt-4 border-t border-border/50">
+                                                            <h4 className="font-medium text-sm mb-4 text-primary flex items-center gap-2"><Activity className="w-4 h-4" /> Optional: Collateral Pledge</h4>
+                                                            <div className="grid grid-cols-2 gap-4">
+                                                                <div className="space-y-2">
+                                                                    <Label>Asset Type</Label>
+                                                                    <Select value={collateralType} onValueChange={setCollateralType}>
+                                                                        <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
+                                                                        <SelectContent>
+                                                                            <SelectItem value="none">- None -</SelectItem>
+                                                                            <SelectItem value="property">Real Estate / Property</SelectItem>
+                                                                            <SelectItem value="vehicle">Vehicle</SelectItem>
+                                                                            <SelectItem value="deposits">Fixed Deposits</SelectItem>
+                                                                            <SelectItem value="gold">Gold</SelectItem>
+                                                                        </SelectContent>
+                                                                    </Select>
+                                                                </div>
+                                                                {collateralType !== 'none' && (
+                                                                    <div className="space-y-2">
+                                                                        <Label>Estimated Value ($)</Label>
+                                                                        <Input type="number" required placeholder="50000" value={collateralValue} onChange={e => setCollateralValue(e.target.value)} className="h-10 font-mono bg-background/50" />
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+
                                                         <div className="space-y-2">
                                                             <Label>Purpose of Loan</Label>
-                                                            <Input required placeholder="Brief description" className="h-12 bg-background/50" />
+                                                            <Input required placeholder="Brief description" value={applyPurpose} onChange={e => setApplyPurpose(e.target.value)} className="h-12 bg-background/50" />
                                                         </div>
                                                     </div>
                                                     <Button type="submit" className="w-full h-12">Review Application</Button>

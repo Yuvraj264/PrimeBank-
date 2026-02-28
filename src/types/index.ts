@@ -95,22 +95,48 @@ export interface Transaction {
   tags?: string[];
 }
 
+export interface EMIScheduleItem {
+  month: number;
+  principalComponent: number;
+  interestComponent: number;
+  remainingBalance: number;
+}
+
 export interface Loan {
   id: string;
+  _id?: string;
   userId: string;
-  type: 'personal' | 'home' | 'auto' | 'business';
-  amount: number;
+  type?: 'personal' | 'home' | 'auto' | 'business';
+  loanType?: 'personal' | 'home' | 'auto' | 'business' | 'education' | 'car';
+  amount?: number;
+  principalAmount?: number;
   interestRate: number;
-  tenure: number;
+  tenure?: number;
+  tenureMonths?: number;
   status: 'approved' | 'pending' | 'rejected' | 'active';
-  appliedAt: string;
-  monthlyEmi: number;
+  appliedAt?: string;
+  monthlyEmi?: number;
+  emiAmount?: number;
+  outstandingPrincipal?: number;
+  remainingBalance?: number;
   creditScore?: number;
   monthlyIncome?: number;
   employmentStatus?: string;
   approvedBy?: string;
   approvedAt?: string;
   adminComment?: string;
+  emiSchedule?: EMIScheduleItem[];
+  collateral?: {
+    assetType: string;
+    assetValue: number;
+    ltvRatio: number;
+    valuationDate: string;
+  };
+  riskProfile?: {
+    approvalProbability: number;
+    maxLoanLimit: number;
+    riskScore: number;
+  };
 }
 
 export interface Beneficiary {
