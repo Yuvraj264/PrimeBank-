@@ -11,8 +11,32 @@ tenure_months -> tenureMonths
 emi_amount -> emiAmount
 remaining_balance -> remainingBalance
 status -> status (pending/approved/rejected)
+emi_schedule -> emiSchedule (Array of monthly breakdown)
+collateral -> collateral (Asset tracking)
+risk_profile -> riskProfile (ML output payload)
 created_at -> timestamps
 */
+
+export interface IEMISchedule {
+    month: number;
+    principalComponent: number;
+    interestComponent: number;
+    remainingBalance: number;
+}
+
+export interface ICollateral {
+    assetType: string;
+    assetValue: number;
+    ltvRatio: number;
+    valuationDate: Date;
+}
+
+export interface IRiskProfile {
+    approvalProbability: number;
+    maxLoanLimit: number;
+    riskScore: number;
+}
+
 
 export interface ILoan extends Document {
     userId: mongoose.Schema.Types.ObjectId;
@@ -23,6 +47,9 @@ export interface ILoan extends Document {
     emiAmount: number;
     remainingBalance: number;
     status: 'pending' | 'approved' | 'rejected';
+    emiSchedule?: IEMISchedule[];
+    collateral?: ICollateral;
+    riskProfile?: IRiskProfile;
 
     // Legacy fields
     type?: string;
@@ -54,6 +81,23 @@ const LoanSchema: Schema = new Schema({
         type: String,
         enum: ['pending', 'approved', 'rejected'],
         default: 'pending'
+    },
+    emiSchedule: [{
+        month: { type: Number },
+        principalComponent: { type: Number },
+        interestComponent: { type: Number },
+        remainingBalance: { type: Number }
+    }],
+    collateral: {
+        assetType: { type: String },
+        assetValue: { type: Number },
+        ltvRatio: { type: Number },
+        valuationDate: { type: Date }
+    },
+    riskProfile: {
+        approvalProbability: { type: Number },
+        maxLoanLimit: { type: Number },
+        riskScore: { type: Number }
     },
 
     // Legacy fields

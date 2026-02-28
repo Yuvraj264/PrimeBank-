@@ -4,42 +4,56 @@ import { transactionRepository } from '../repositories/TransactionRepository';
 import { AppError } from '../utils/appError';
 import { ILoan } from '../models/Loan';
 import { notificationService } from './NotificationService';
+import { riskEngineService } from './RiskEngineService';
 import mongoose from 'mongoose';
 
 export class LoanService {
     async applyLoan(userId: string, data: any): Promise<ILoan> {
-        const { loanType, principalAmount, tenureMonths, monthlyIncome, employmentStatus } = data;
+        const { loanType, principalAmount, tenureMonths, monthlyIncome, employmentStatus, collateral } = data;
 
-        const creditScore = Math.floor(Math.random() * (850 - 600 + 1)) + 600;
+        const riskResult = await riskEngineService.evaluateRisk(
+            userId,
+            principalAmount,
+            tenureMonths,
+            monthlyIncome
+        );
 
-        let interestRate = 10;
-        if (creditScore > 750) interestRate = 8;
-        if (loanType === 'home') interestRate -= 1;
+        // Optional policy: automatically reject if probability is practically zero or principal exceeds engine constraints.
+        // We'll let it pass to 'pending' state but store the exact risk profile for admin review.
 
-        // Calculate EMI
-        const r = (interestRate / 12) / 100;
-        const n = tenureMonths;
-        const p = principalAmount;
+        let assignedInterestRate = riskResult.assignedInterestRate;
+        if (loanType === 'home') assignedInterestRate = Math.max(5, assignedInterestRate - 1.5); // lower home loan rates
 
-        let emiAmount = 0;
-        if (r > 0) {
-            emiAmount = (p * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
-        } else {
-            emiAmount = p / n;
-        }
+        // Generate Full Amortization Schedule
+        const emiSchedule = riskEngineService.generateEMISchedule(principalAmount, assignedInterestRate, tenureMonths);
+        const emiAmount = emiSchedule.length > 0
+            ? Math.round((emiSchedule[0].principalComponent + emiSchedule[0].interestComponent) * 100) / 100
+            : 0;
 
         return await loanRepository.create({
             userId: userId as any,
             loanType,
             principalAmount,
             tenureMonths,
-            interestRate,
-            emiAmount: Math.round(emiAmount * 100) / 100,
+            interestRate: assignedInterestRate,
+            emiAmount,
             remainingBalance: principalAmount,
-            creditScore,
+            creditScore: riskResult.riskScore,
             monthlyIncome,
             employmentStatus,
-            status: 'pending'
+            status: 'pending',
+            emiSchedule,
+            collateral: collateral ? {
+                assetType: collateral.assetType,
+                assetValue: collateral.assetValue,
+                ltvRatio: collateral.assetValue ? (principalAmount / collateral.assetValue) * 100 : 0,
+                valuationDate: collateral.valuationDate || new Date()
+            } : undefined,
+            riskProfile: {
+                approvalProbability: riskResult.approvalProbability,
+                maxLoanLimit: riskResult.maxLoanLimit,
+                riskScore: riskResult.riskScore
+            }
         });
     }
 
