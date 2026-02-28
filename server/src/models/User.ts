@@ -22,7 +22,7 @@ export interface IUser extends Document {
     phone: string;
     password?: string;
     transactionPin?: string;
-    role: 'customer' | 'admin' | 'employee'; // keeping employee from old schema just in case
+    role: 'customer' | 'admin' | 'employee' | 'merchant'; // keeping employee from old schema just in case
     assignedRole?: mongoose.Types.ObjectId; // RBAC extension
     isVerified: boolean;
     kycStatus: 'pending' | 'approved' | 'rejected';
@@ -52,7 +52,7 @@ const UserSchema: Schema = new Schema({
     phone: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     transactionPin: { type: String },
-    role: { type: String, enum: ['customer', 'admin', 'employee'], default: 'customer' },
+    role: { type: String, enum: ['customer', 'admin', 'employee', 'merchant'], default: 'customer' },
     assignedRole: { type: Schema.Types.ObjectId, ref: 'Role' }, // RBAC extension
     isVerified: { type: Boolean, default: false },
     kycStatus: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
