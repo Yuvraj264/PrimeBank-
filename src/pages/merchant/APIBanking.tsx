@@ -19,12 +19,15 @@ const APIBanking = () => {
             const res = await merchantService.getApiConfig();
             setConfig(res.data.data);
             setWebhookUrl(res.data.data.webhookUrl || '');
-        } catch (err) {
-            toast({
-                title: 'Error fetching config',
-                description: 'Failed to load API banking configuration.',
-                variant: 'destructive'
-            });
+        } catch (err: any) {
+            // 404 is expected here during the very first run since BusinessProfile might not exist until they generate a key
+            if (err.response?.status !== 404) {
+                toast({
+                    title: 'Error fetching config',
+                    description: 'Failed to load API banking configuration.',
+                    variant: 'destructive'
+                });
+            }
         } finally {
             setLoading(false);
         }
