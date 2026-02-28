@@ -6,6 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { formatCurrency } from '@/lib/utils';
 import { useAppSelector } from '@/store';
+import { Link } from 'react-router-dom';
 
 const MerchantDashboard = () => {
     const [summary, setSummary] = useState<any>(null);
@@ -55,9 +56,9 @@ const MerchantDashboard = () => {
                     <p className="text-muted-foreground mb-8">
                         Your merchant profile has not been initialized yet. To begin using the Business Hub, please activate your profile by generating your first API Key.
                     </p>
-                    <a href="/merchant/api" className="px-6 py-3 bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg font-medium transition-colors shadow-lg shadow-primary/20">
+                    <Link to="/merchant/api" className="px-6 py-3 bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg font-medium transition-colors shadow-lg shadow-primary/20">
                         Activate Business Profile
-                    </a>
+                    </Link>
                 </div>
             </DashboardLayout>
         );
