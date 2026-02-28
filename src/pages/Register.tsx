@@ -13,6 +13,7 @@ export default function Register() {
     const [phone, setPhone] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [role, setRole] = useState<'customer' | 'merchant'>('customer');
     const [loading, setLoading] = useState(false);
     const dispatch = useAppDispatch();
     const navigate = useNavigate();
@@ -35,7 +36,7 @@ export default function Register() {
                 email,
                 phone,
                 password,
-                role: 'customer'
+                role
             });
 
             // Redirect to login page instead of auto-login
@@ -76,6 +77,23 @@ export default function Register() {
                 {/* Register Card */}
                 <div className="glass-card p-8 space-y-6">
                     <form onSubmit={handleRegister} className="space-y-4">
+                        <div className="grid grid-cols-2 p-1 bg-secondary/30 rounded-lg border border-border/30 mb-6">
+                            <button
+                                type="button"
+                                onClick={() => setRole('customer')}
+                                className={`py-1.5 text-sm font-medium rounded-md transition-all ${role === 'customer' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                            >
+                                Customer
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setRole('merchant')}
+                                className={`py-1.5 text-sm font-medium rounded-md transition-all ${role === 'merchant' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                            >
+                                Merchant
+                            </button>
+                        </div>
+
                         <div className="space-y-2">
                             <label className="text-sm font-medium text-muted-foreground">Full Name</label>
                             <div className="relative">

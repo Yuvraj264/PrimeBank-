@@ -11,6 +11,7 @@ const roles: { role: UserRole; label: string; icon: React.ElementType; descripti
   { role: 'admin', label: 'Administrator', icon: Shield, description: 'System management & monitoring' },
   { role: 'employee', label: 'Employee', icon: UserCheck, description: 'Customer operations & approvals' },
   { role: 'customer', label: 'Customer', icon: Users, description: 'Banking & account services' },
+  { role: 'merchant', label: 'Merchant', icon: Landmark, description: 'Business & API Banking Hub' },
 ];
 
 export default function Login() {
@@ -26,6 +27,9 @@ export default function Login() {
         break;
       case 'admin':
         setEmail('admin@ibank.com');
+        break;
+      case 'merchant':
+        setEmail('merchant@ibank.com');
         break;
       case 'customer':
         setEmail('customer@ibank.com');
@@ -83,7 +87,7 @@ export default function Login() {
           {/* Role Selection */}
           <div className="space-y-3">
             <label className="text-sm font-medium text-muted-foreground">Sign in as</label>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-2"> {/* Changed to 2 columns for better layout with 4 roles */}
               {roles.map((r) => (
                 <button
                   key={r.role}
