@@ -23,16 +23,21 @@ import apiBankingRoutes from './routes/apiBankingRoutes';
 import vendorRoutes from './routes/vendorRoutes';
 import bulkProcessingRoutes from './routes/bulkProcessingRoutes';
 import gstRoutes from './routes/gstRoutes';
+import analyticsRoutes from './routes/analyticsRoutes';
 import errorHandler from './middlewares/errorHandler';
 import dotenv from 'dotenv';
 import { AppError } from './utils/appError';
 import { startTransactionCronJobs } from './jobs/transactionJobs';
+import { startAnalyticsCronJobs } from './jobs/analyticsJobs';
+import { connectRedis } from './config/redis';
 
 dotenv.config();
 
 connectDB();
+connectRedis();
 
 startTransactionCronJobs();
+startAnalyticsCronJobs();
 
 const app = express();
 
@@ -61,6 +66,7 @@ app.use('/api/v1/dashboard', dashboardRoutes);
 app.use('/api/v1/bills', billRoutes);
 app.use('/api/v1/investments', investmentRoutes);
 app.use('/api/v1/notifications', notificationRoutes);
+app.use('/api/v1/analytics', analyticsRoutes);
 app.use('/api/v1/support', supportRoutes);
 app.use('/api/v1/compliance', complianceRoutes);
 app.use('/api/v1/business/api', apiBankingRoutes);

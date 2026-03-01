@@ -41,6 +41,7 @@ import FraudMonitor from './pages/admin/FraudMonitor';
 import AuditLogs from './pages/admin/AuditLogs';
 import SystemConfig from './pages/admin/SystemConfig';
 import RegulatoryReports from './pages/admin/RegulatoryReports';
+import AnalyticsDashboard from './pages/admin/AnalyticsDashboard';
 
 // Merchant Routes
 import MerchantDashboard from './pages/merchant/MerchantDashboard';
@@ -216,6 +217,11 @@ const App = () => (
             <Route path="/admin/reports" element={
               <ProtectedRoute allowedRoles={['admin']}>
                 <RegulatoryReports />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/analytics" element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AnalyticsDashboard />
               </ProtectedRoute>
             } />
             <Route path="/admin/config" element={

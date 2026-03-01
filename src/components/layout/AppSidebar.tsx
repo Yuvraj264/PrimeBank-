@@ -50,6 +50,7 @@ const getNavItems = (role: UserRole): NavItem[] => {
     case 'admin':
       return [
         { label: 'Dashboard', path: '/admin', icon: LayoutDashboard },
+        { label: 'Analytics', path: '/admin/analytics', icon: Activity },
         { label: 'User Management', path: '/admin/users', icon: Users },
         { label: 'Employee Mgmt', path: '/admin/employees', icon: UserPlus },
         { label: 'Accounts', path: '/admin/accounts', icon: ClipboardList },
