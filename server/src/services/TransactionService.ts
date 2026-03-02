@@ -6,6 +6,7 @@ import { AppError } from '../utils/appError';
 import { ITransaction } from '../models/Transaction';
 import { notificationService } from './NotificationService';
 import { complianceService } from './ComplianceService';
+import { webhookService } from './WebhookService';
 import mongoose from 'mongoose';
 
 export class TransactionService {
@@ -94,6 +95,23 @@ export class TransactionService {
             senderName: senderUser?.name,
             description: description || 'Received from ' + senderAccount.accountNumber,
             category: 'income'
+        });
+
+        // Trigger webhooks for both sender and receiver if they are merchants
+        await webhookService.triggerWebhook(userId, 'payment_completed', {
+            transactionId: 'transfer_' + Date.now(), // Generate a real ID if needed, but for MVP
+            type: 'transfer_sent',
+            amount: amount,
+            currency: senderAccount.currency,
+            status: 'completed'
+        });
+
+        await webhookService.triggerWebhook(receiverAccount.userId as any, 'payment_completed', {
+            transactionId: 'transfer_' + Date.now(),
+            type: 'transfer_received',
+            amount: amount,
+            currency: receiverAccount.currency,
+            status: 'completed'
         });
     }
 
@@ -401,6 +419,13 @@ export class TransactionService {
             `Successfully deposited ${amount} into your account.`
         );
 
+        await webhookService.triggerWebhook(userId, 'payment_completed', {
+            transactionId: transaction._id,
+            type: 'deposit',
+            amount: amount,
+            status: 'completed'
+        });
+
         return transaction;
     }
 
@@ -429,6 +454,13 @@ export class TransactionService {
             'withdrawal_alert',
             `Successfully withdrew ${amount} from your account.`
         );
+
+        await webhookService.triggerWebhook(userId, 'payment_completed', {
+            transactionId: transaction._id,
+            type: 'withdrawal',
+            amount: amount,
+            status: 'completed'
+        });
 
         return transaction;
     }
@@ -469,16 +501,26 @@ export class TransactionService {
             lastLimitResetDate: account.lastLimitResetDate
         } as any);
 
-        return await transactionRepository.create({
+        const transaction = await transactionRepository.create({
             userId: userId as any,
             accountId: account._id as any,
             type: 'bill_payment',
             amount: -amount,
             status: 'completed',
-            description: `Bill Payment to ${billerName} `,
+            description: `Bill Payment to ${billerName}`,
             category: 'bills',
             reference: billType
         });
+
+        await webhookService.triggerWebhook(userId, 'payment_completed', {
+            transactionId: transaction._id,
+            type: 'bill_payment',
+            amount: amount,
+            biller: billerName,
+            status: 'completed'
+        });
+
+        return transaction;
     }
 
     async getAllTransactions(): Promise<ITransaction[]> {

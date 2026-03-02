@@ -11,6 +11,7 @@ export interface IBusinessProfile extends Document {
     apiKey?: string;
     apiSecretHash?: string;
     webhookUrl?: string;
+    webhookSecret?: string;
     apiRateLimit: number;
     isActive: boolean;
 }
@@ -30,6 +31,7 @@ const BusinessProfileSchema: Schema = new Schema({
     apiKey: { type: String, unique: true, sparse: true },
     apiSecretHash: { type: String },
     webhookUrl: { type: String },
+    webhookSecret: { type: String },
     apiRateLimit: { type: Number, default: 100 }, // Requests per minute
     isActive: { type: Boolean, default: true }
 }, { timestamps: true });
