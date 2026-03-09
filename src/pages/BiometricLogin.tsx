@@ -5,56 +5,79 @@ import { useAppDispatch } from '@/store';
 import { setUser } from '@/store/authSlice';
 import { Fingerprint, CheckCircle2, XCircle, RotateCcw, ArrowLeft } from 'lucide-react';
 
-type ScanState = 'idle' | 'scanning' | 'success' | 'failure';
+import { startAuthentication } from '@simplewebauthn/browser';
+import api from '@/lib/api';
+import { toast } from 'sonner';
 
-const simulateLogin = (role: string) => {
-  return {
-    id: 'user_123',
-    name: 'John Doe',
-    email: 'john@example.com',
-    role: role,
-    status: 'active',
-    twoFactorEnabled: false,
-    profileCompleted: true
-  };
-};
+type ScanState = 'idle' | 'scanning' | 'success' | 'failure';
 
 export default function BiometricLogin() {
   const [state, setState] = useState<ScanState>('idle');
+  const [email, setEmail] = useState('');
   const [progress, setProgress] = useState(0);
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
 
-  const startScan = () => {
+  const startScan = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) {
+      toast.error('Please enter your email first');
+      return;
+    }
     setState('scanning');
     setProgress(0);
   };
 
+
+
   useEffect(() => {
     if (state !== 'scanning') return;
-    const interval = setInterval(() => {
-      setProgress((p) => {
-        if (p >= 100) {
-          clearInterval(interval);
-          const success = Math.random() > 0.3;
-          if (success) {
-            setState('success');
-            const user = simulateLogin('customer');
-            setTimeout(() => {
-              // Set a mock token for the demo
-              localStorage.setItem('token', 'mock_biometric_token');
-              dispatch(setUser(user as any));
-              navigate('/customer');
-            }, 1500);
-          } else {
-            setState('failure');
-          }
-          return 100;
+
+    let isCancelled = false;
+    let interval: NodeJS.Timeout;
+
+    const runAuth = async () => {
+      try {
+        const res = await api.post('/webauthn/login/generate-options', { email });
+        const { options, challengeId } = res.data.data;
+
+        const authResp = await startAuthentication(options);
+
+        const verifyRes = await api.post('/webauthn/login/verify', {
+          body: authResp,
+          challengeId
+        });
+
+        if (!isCancelled) {
+          setProgress(100);
+          setState('success');
+          const { user, token } = verifyRes.data;
+          localStorage.setItem('token', token);
+          dispatch(setUser(user));
+          setTimeout(() => navigate(`/${user.role}`), 1000);
         }
-        return p + 2;
+      } catch (error: any) {
+        if (!isCancelled) {
+          console.error('Authentication Error:', error);
+          setProgress(0);
+          setState('failure');
+        }
+      }
+    };
+
+    runAuth();
+
+    interval = setInterval(() => {
+      setProgress((p) => {
+        if (p >= 90) return 90;
+        return p + 5;
       });
-    }, 50);
-    return () => clearInterval(interval);
+    }, 100);
+
+    return () => {
+      isCancelled = true;
+      clearInterval(interval);
+    };
   }, [state, dispatch, navigate]);
 
   return (
@@ -170,14 +193,28 @@ export default function BiometricLogin() {
 
         {/* Action buttons */}
         {state === 'idle' && (
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={startScan}
-            className="px-8 py-3 rounded-xl bg-primary text-primary-foreground font-medium glow-primary transition-colors hover:bg-primary/90"
-          >
-            Start Scan
-          </motion.button>
+          <form onSubmit={startScan} className="space-y-4 max-w-xs mx-auto">
+            <div className="space-y-2 text-left">
+              <label className="text-sm font-medium text-muted-foreground">Account Email</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="name@ibank.com"
+                required
+                className="w-full px-4 py-2.5 bg-secondary/50 border border-border/30 rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-colors"
+              />
+            </div>
+
+            <motion.button
+              type="submit"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="w-full px-8 py-3 rounded-xl bg-primary text-primary-foreground font-medium glow-primary transition-colors hover:bg-primary/90"
+            >
+              Start Biometric Scan
+            </motion.button>
+          </form>
         )}
         {state === 'failure' && (
           <motion.button

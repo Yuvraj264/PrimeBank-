@@ -5,6 +5,7 @@ import { AppError } from '../utils/appError';
 import { ILoan } from '../models/Loan';
 import { notificationService } from './NotificationService';
 import { riskEngineService } from './RiskEngineService';
+import { EventBus } from './EventBus';
 import mongoose from 'mongoose';
 
 export class LoanService {
@@ -91,6 +92,15 @@ export class LoanService {
             'loan_update',
             `Your loan application for ${updatedLoan.principalAmount} has been ${status}.`
         );
+
+        if (status === 'approved') {
+            EventBus.publish('loan.approved', {
+                userId: updatedLoan.userId,
+                loanId: updatedLoan._id,
+                principalAmount: updatedLoan.principalAmount,
+                emiAmount: updatedLoan.emiAmount
+            });
+        }
 
         return updatedLoan;
     }

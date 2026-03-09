@@ -175,3 +175,35 @@ export const requestAccountClosure = catchAsync(async (req: Request, res: Respon
         message: 'Account closure requested successfully. Our team will process this shortly.'
     });
 });
+
+import redisClient from '../config/redis';
+
+export const sendOTP = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
+    const { email } = req.body;
+    if (!email) return next(new AppError('Please provide an email', 400));
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const ttl = 10 * 60; // 10 minutes
+
+    await redisClient.setEx(`otp:${email}`, ttl, otp);
+
+    // Mock sending email
+    console.log(`[AUTH] Generated OTP for ${email}: ${otp}`);
+
+    res.status(200).json({ status: 'success', message: 'OTP sent to email', data: { mockOtp: otp } });
+});
+
+export const verifyOTP = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
+    const { email, otp } = req.body;
+    if (!email || !otp) return next(new AppError('Please provide email and otp', 400));
+
+    const storedOtp = await redisClient.get(`otp:${email}`);
+    if (!storedOtp) return next(new AppError('OTP expired or not found', 400));
+
+    if (storedOtp !== otp) return next(new AppError('Invalid OTP', 400));
+
+    // Clear after success
+    await redisClient.del(`otp:${email}`);
+
+    res.status(200).json({ status: 'success', message: 'OTP verified successfully' });
+});

@@ -97,4 +97,24 @@ TransactionSchema.pre('save', async function () {
     }
 });
 
+// Post-save hook to emit event
+TransactionSchema.post('save', function (doc) {
+    try {
+        const { EventBus } = require('../services/EventBus');
+        EventBus.publish('transaction.created', {
+            userId: doc.userId,
+            eventType: 'payment_created',
+            payload: {
+                transactionId: doc._id,
+                type: doc.type,
+                amount: doc.amount,
+                status: doc.status,
+                currency: doc.currency
+            }
+        });
+    } catch (err) {
+        console.error('[TransactionSchema] Failed to emit transaction.created', err);
+    }
+});
+
 export default mongoose.model<ITransaction>('Transaction', TransactionSchema);

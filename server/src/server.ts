@@ -23,21 +23,24 @@ import apiBankingRoutes from './routes/apiBankingRoutes';
 import vendorRoutes from './routes/vendorRoutes';
 import bulkProcessingRoutes from './routes/bulkProcessingRoutes';
 import gstRoutes from './routes/gstRoutes';
+import webauthnRoutes from './routes/webauthnRoutes';
 import analyticsRoutes from './routes/analyticsRoutes';
 import errorHandler from './middlewares/errorHandler';
 import dotenv from 'dotenv';
 import { AppError } from './utils/appError';
-import { startTransactionCronJobs } from './jobs/transactionJobs';
-import { startAnalyticsCronJobs } from './jobs/analyticsJobs';
+
 import { connectRedis } from './config/redis';
+import { rabbitMQ } from './config/rabbitMQ';
+import { EventBus } from './services/EventBus';
 
 dotenv.config();
 
 connectDB();
 connectRedis();
+rabbitMQ.connect().then(() => {
+    EventBus.init();
+});
 
-startTransactionCronJobs();
-startAnalyticsCronJobs();
 
 const app = express();
 
@@ -73,6 +76,7 @@ app.use('/api/v1/business/api', apiBankingRoutes);
 app.use('/api/v1/business/vendors', vendorRoutes);
 app.use('/api/v1/business/bulk', bulkProcessingRoutes);
 app.use('/api/v1/business/gst', gstRoutes);
+app.use('/api/v1/webauthn', webauthnRoutes);
 
 app.use((req, res, next) => {
     next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));

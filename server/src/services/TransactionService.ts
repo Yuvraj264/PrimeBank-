@@ -2,11 +2,11 @@ import { transactionRepository } from '../repositories/TransactionRepository';
 import { accountRepository } from '../repositories/AccountRepository';
 import { userRepository } from '../repositories/UserRepository';
 import { notificationRepository } from '../repositories/NotificationRepository';
+import { complianceService } from './ComplianceService';
 import { AppError } from '../utils/appError';
 import { ITransaction } from '../models/Transaction';
-import { notificationService } from './NotificationService';
-import { complianceService } from './ComplianceService';
-import { webhookService } from './WebhookService';
+import { QueueService } from './QueueService';
+import { EventBus } from './EventBus';
 import mongoose from 'mongoose';
 
 export class TransactionService {
@@ -97,21 +97,29 @@ export class TransactionService {
             category: 'income'
         });
 
-        // Trigger webhooks for both sender and receiver if they are merchants
-        await webhookService.triggerWebhook(userId, 'payment_completed', {
-            transactionId: 'transfer_' + Date.now(), // Generate a real ID if needed, but for MVP
-            type: 'transfer_sent',
-            amount: amount,
-            currency: senderAccount.currency,
-            status: 'completed'
+        // Trigger webhooks for both sender and receiver if they are merchants via EventBus
+        EventBus.publish('transaction.completed', {
+            userId: userId,
+            eventType: 'payment_completed',
+            payload: {
+                transactionId: 'transfer_' + Date.now(),
+                type: 'transfer_sent',
+                amount: amount,
+                currency: senderAccount.currency,
+                status: 'completed'
+            }
         });
 
-        await webhookService.triggerWebhook(receiverAccount.userId as any, 'payment_completed', {
-            transactionId: 'transfer_' + Date.now(),
-            type: 'transfer_received',
-            amount: amount,
-            currency: receiverAccount.currency,
-            status: 'completed'
+        EventBus.publish('transaction.completed', {
+            userId: receiverAccount.userId as any,
+            eventType: 'payment_completed',
+            payload: {
+                transactionId: 'transfer_' + Date.now(),
+                type: 'transfer_received',
+                amount: amount,
+                currency: receiverAccount.currency,
+                status: 'completed'
+            }
         });
     }
 
@@ -276,29 +284,38 @@ export class TransactionService {
         session.startTransaction();
 
         try {
-            const transaction = await transactionRepository.model.create([{
+            // Create pending transactions
+            const tx = await transactionRepository.model.create([{
                 userId: userId as any,
                 accountId: senderAccount._id as any,
                 type: 'transfer',
-                method: 'neft', // Example
+                method: 'neft',
                 amount: -amount,
                 currency: senderAccount.currency,
-                status: 'pending', // Pending to allow for cron simulation
+                status: 'pending',
                 receiverName: `Bank Transfer - ${receiverBankName}`,
                 receiverAccountId: receiverAccountNumber,
                 description: description || 'Bank Transfer',
                 category: 'transfer',
-                processingDelay: 2, // Assuming hours
-                scheduledDate: new Date(Date.now() + 2 * 60 * 60 * 1000) // 2 hours from now
+                processingDelay: 2,
+                scheduledDate: new Date(Date.now() + 2 * 60 * 60 * 1000)
             }], { session });
 
             senderAccount.balance -= Number(amount);
             senderAccount.usedLimit = (senderAccount.usedLimit || 0) + Number(amount);
             await senderAccount.save({ session });
 
-            // Create a pseudo receiver transaction if needed, or simply let the external bank handle it. Since we are simulating, we only hold the debit transaction.
             await session.commitTransaction();
             session.endSession();
+
+            // Queue the transfer completion logic to execute after 2 hours
+            await QueueService.addScheduledTransfer({
+                transactionId: tx[0]._id,
+                userId,
+                receiverAccountId: receiverAccountNumber,
+                amount
+            }, 2 * 60 * 60 * 1000);
+
         } catch (error) {
             await session.abortTransaction();
             session.endSession();
@@ -314,7 +331,10 @@ export class TransactionService {
             throw new AppError(complianceCheck.reason || 'Transaction flagged by Compliance Engine', 403);
         }
 
-        if (!scheduledDate || new Date(scheduledDate) <= new Date()) {
+        const scheduledTime = new Date(scheduledDate).getTime();
+        const delayMs = scheduledTime - Date.now();
+
+        if (delayMs <= 0) {
             throw new AppError('Scheduled date must be in the future', 400);
         }
 
@@ -329,9 +349,8 @@ export class TransactionService {
         if (!senderAccount) throw new AppError('Sender account not found', 404);
         if (senderAccount.status !== 'active' && senderAccount.status !== 'dormant') throw new AppError(`Sender account is ${senderAccount.status}`, 400);
 
-        // We DO NOT deduct balance yet for scheduled transfer. We will check balance when the cron job executes it.
-        // We just record the scheduled intention.
-        await transactionRepository.create({
+        // Record the intention
+        const tx = await transactionRepository.create({
             userId: userId as any,
             accountId: senderAccount._id as any,
             type: 'transfer',
@@ -344,6 +363,15 @@ export class TransactionService {
             category: 'transfer',
             scheduledDate: new Date(scheduledDate)
         });
+
+        // Add to BullMQ with the specific delay
+        await QueueService.addScheduledTransfer({
+            transactionId: tx._id,
+            userId,
+            accountId: senderAccount._id,
+            receiverAccountId: receiverAccountNumber,
+            amount
+        }, delayMs);
     }
 
     async getMyTransactions(userId: string, queryParams: any): Promise<any> {
@@ -413,17 +441,21 @@ export class TransactionService {
             category: 'income'
         });
 
-        await notificationService.createNotification(
-            userId,
-            'deposit_alert',
-            `Successfully deposited ${amount} into your account.`
-        );
+        EventBus.publish('notification.create', {
+            userId: userId,
+            type: 'deposit_alert',
+            message: `Successfully deposited ${amount} into your account.`
+        });
 
-        await webhookService.triggerWebhook(userId, 'payment_completed', {
-            transactionId: transaction._id,
-            type: 'deposit',
-            amount: amount,
-            status: 'completed'
+        EventBus.publish('transaction.completed', {
+            userId: userId,
+            eventType: 'payment_completed',
+            payload: {
+                transactionId: transaction._id,
+                type: 'deposit',
+                amount: amount,
+                status: 'completed'
+            }
         });
 
         return transaction;
@@ -449,17 +481,21 @@ export class TransactionService {
             category: 'expense'
         });
 
-        await notificationService.createNotification(
-            userId,
-            'withdrawal_alert',
-            `Successfully withdrew ${amount} from your account.`
-        );
+        EventBus.publish('notification.create', {
+            userId: userId,
+            type: 'withdrawal_alert',
+            message: `Successfully withdrew ${amount} from your account.`
+        });
 
-        await webhookService.triggerWebhook(userId, 'payment_completed', {
-            transactionId: transaction._id,
-            type: 'withdrawal',
-            amount: amount,
-            status: 'completed'
+        EventBus.publish('transaction.completed', {
+            userId: userId,
+            eventType: 'payment_completed',
+            payload: {
+                transactionId: transaction._id,
+                type: 'withdrawal',
+                amount: amount,
+                status: 'completed'
+            }
         });
 
         return transaction;
@@ -512,12 +548,16 @@ export class TransactionService {
             reference: billType
         });
 
-        await webhookService.triggerWebhook(userId, 'payment_completed', {
-            transactionId: transaction._id,
-            type: 'bill_payment',
-            amount: amount,
-            biller: billerName,
-            status: 'completed'
+        EventBus.publish('transaction.completed', {
+            userId: userId,
+            eventType: 'payment_completed',
+            payload: {
+                transactionId: transaction._id,
+                type: 'bill_payment',
+                amount: amount,
+                biller: billerName,
+                status: 'completed'
+            }
         });
 
         return transaction;

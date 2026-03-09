@@ -4,6 +4,7 @@ import { userRepository } from '../repositories/UserRepository';
 import { transactionRepository } from '../repositories/TransactionRepository';
 import { AppError } from '../utils/appError';
 import { auditService } from './AuditService';
+import { EventBus } from './EventBus';
 
 export class ComplianceService {
 
@@ -120,6 +121,7 @@ export class ComplianceService {
 
         if (beforeState.riskScore !== afterState.riskScore) {
             await auditService.logAction(undefined, 'Automated Risk Bump', 'User', userId, 'System', beforeState, afterState, 'warning');
+            EventBus.publish('user.risk.updated', { userId, beforeState, afterState });
         }
     }
 
@@ -157,6 +159,7 @@ export class ComplianceService {
         const afterState = JSON.parse(JSON.stringify(updatedUser));
 
         await auditService.logAction(undefined, 'Admin Updated User Risk', 'User', userId, 'System', beforeState, afterState, 'warning');
+        EventBus.publish('user.risk.updated', { userId, beforeState, afterState });
 
         return updatedUser;
     }

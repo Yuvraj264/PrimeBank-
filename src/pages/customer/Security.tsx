@@ -14,6 +14,8 @@ import {
 import { toast } from 'sonner';
 import { formatDistanceToNow, subDays, subHours } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
+import { startRegistration } from '@simplewebauthn/browser';
+import api from '@/lib/api';
 
 // --- MOCK DATA ---
 const loginActivity = [
@@ -94,6 +96,22 @@ export default function Security() {
             a.click();
             toast.success("Security logs downloaded!");
         }, 2000);
+    };
+
+    const handleRegisterBiometrics = async () => {
+        try {
+            const res = await api.post('/webauthn/register/generate-options');
+            const attResp = await startRegistration(res.data.data);
+            await api.post('/webauthn/register/verify', attResp);
+            toast.success('Biometric device registered successfully!');
+        } catch (error: any) {
+            console.error('Biometric registration error:', error);
+            if (error.name === 'NotAllowedError') {
+                toast.error('Registration cancelled or not allowed.');
+            } else {
+                toast.error(error.response?.data?.message || error.message || 'Failed to register biometric device');
+            }
+        }
     };
 
     return (
@@ -189,6 +207,22 @@ export default function Security() {
                                     <span className="font-medium text-sm">Enable 2FA Protection</span>
                                     <Switch checked={twoFactor} onCheckedChange={setTwoFactor} />
                                 </div>
+                            </GlassCard>
+
+                            {/* Biometrics */}
+                            <GlassCard className="p-6 flex flex-col justify-between">
+                                <div>
+                                    <div className="flex items-center gap-2 mb-2 text-emerald-400">
+                                        <Smartphone className="w-5 h-5" />
+                                        <h3 className="font-semibold text-lg">Biometric Login</h3>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground mb-6">
+                                        Register this device (TouchID, FaceID, Windows Hello) to log in instantly without passwords.
+                                    </p>
+                                </div>
+                                <Button onClick={handleRegisterBiometrics} variant="secondary" className="w-full mt-auto">
+                                    Register This Device
+                                </Button>
                             </GlassCard>
 
                             {/* Freeze Account (Danger Zone) */}

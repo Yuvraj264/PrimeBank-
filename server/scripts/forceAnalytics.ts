@@ -6,10 +6,10 @@ import { connectRedis } from '../src/config/redis';
 
 const forceRun = async () => {
     try {
-        await mongoose.connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/primebank');
+        await mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/primebank');
         await connectRedis();
         console.log('Connected. Running manual aggregation for last 5 days...');
-        
+
         for (let i = 4; i >= 0; i--) {
             const date = new Date();
             date.setDate(date.getDate() - i);

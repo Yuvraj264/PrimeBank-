@@ -19,6 +19,17 @@ export class AuthService {
         });
     }
 
+    async generateTokensForUser(user: IUser): Promise<{ accessToken: string; refreshToken: string }> {
+        const accessToken = this.signAccessToken((user._id as any).toString());
+        const refreshToken = this.signRefreshToken((user._id as any).toString());
+
+        user.refreshToken = refreshToken;
+        await user.save();
+
+        return { accessToken, refreshToken };
+    }
+
+
     async register(data: any): Promise<{ user: IUser; accessToken: string; refreshToken: string }> {
         const { name, email, password, role, phone } = data;
 
