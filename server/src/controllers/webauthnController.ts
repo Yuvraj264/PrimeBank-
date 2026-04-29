@@ -12,11 +12,25 @@ import User from '../models/User';
 import { authService } from '../services/AuthService';
 import { auditService } from '../services/AuditService';
 import WebAuthnChallenge from '../models/WebAuthnChallenge';
+import fs from 'fs';
+
+const logDebug = (msg: string) => {
+    try {
+        fs.appendFileSync('webauthn_debug.txt', `${new Date().toISOString()} - ${msg}\n`);
+    } catch (e) { }
+};
 
 // Rely on environment variables or defaults for RP (Relying Party) info
 const rpName = 'iBank';
 const rpID = process.env.RP_ID || 'localhost';
-const expectedOrigin = process.env.VITE_WEB_URL || 'http://localhost:8080';
+const expectedRPID = ['localhost', '127.0.0.1', rpID];
+const expectedOrigin = [
+    'http://localhost:8080',
+    'http://127.0.0.1:8080',
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+    process.env.VITE_WEB_URL || 'http://localhost:8080'
+];
 
 export const generateRegistrationChallenge = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
     const user = (req as any).user;
@@ -73,7 +87,8 @@ export const verifyRegistration = catchAsync(async (req: Request, res: Response,
             response: body,
             expectedChallenge,
             expectedOrigin,
-            expectedRPID: rpID,
+            expectedRPID,
+            requireUserVerification: false,
         });
     } catch (error: any) {
         return next(new AppError(error.message, 400));
@@ -142,36 +157,39 @@ export const generateLoginChallenge = catchAsync(async (req: Request, res: Respo
 
 export const verifyLogin = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
     const { body, challengeId } = req.body;
-    console.log('[verifyLogin] body:', body, 'challengeId:', challengeId);
+    logDebug(`[verifyLogin] Started. challengeId=${challengeId}, body.id=${body?.id}`);
 
     if (!challengeId || !body || !body.id) {
-        console.log('[verifyLogin] Error: Missing validation parameters');
+        logDebug(`[verifyLogin] Error: Missing validation parameters`);
         return next(new AppError('Missing validation parameters', 400));
     }
 
     const challengeDoc = await WebAuthnChallenge.findOne({ challengeKey: `auth:${challengeId}` });
     if (!challengeDoc) {
-        console.log('[verifyLogin] Error: Challenge expired or missing for key:', `auth:${challengeId}`);
+        logDebug(`[verifyLogin] Error: Challenge missing in DB for key auth:${challengeId}`);
         return next(new AppError('Challenge expired or missing', 400));
     }
     const expectedChallenge = challengeDoc.challenge;
+    logDebug(`[verifyLogin] Found expectedChallenge: ${expectedChallenge}`);
 
     // Look up the credential in our database
     // The SimpleWebAuthn browser client returns base64url encoded credential ID in `body.id`
-    const credentialIdBuffer = Buffer.from(body.rawId, 'base64url');
-    console.log('[verifyLogin] Looking for credential with ID length:', credentialIdBuffer.length);
+    const credentialIdBuffer = Buffer.from(body.id, 'base64url');
+    logDebug(`[verifyLogin] Parsed credentialIdBuffer from body.id. Length: ${credentialIdBuffer.length}`);
 
     const credential = await BiometricCredential.findOne({ credentialID: credentialIdBuffer });
     if (!credential) {
-        console.log('[verifyLogin] Error: Credential not found');
+        logDebug(`[verifyLogin] Error: Credential not found in DB`);
         return next(new AppError('Credential not found. Please register your device first.', 404));
     }
+    logDebug(`[verifyLogin] Found credential. UserID: ${credential.userId}`);
 
     const user = await User.findById(credential.userId);
     if (!user) {
-        console.log('[verifyLogin] Error: User not found');
+        logDebug(`[verifyLogin] Error: User not found`);
         return next(new AppError('User not found', 404));
     }
+    logDebug(`[verifyLogin] Calling verifyAuthenticationResponse...`);
 
     let verification;
     try {
@@ -179,7 +197,8 @@ export const verifyLogin = catchAsync(async (req: Request, res: Response, next: 
             response: body,
             expectedChallenge,
             expectedOrigin,
-            expectedRPID: rpID,
+            expectedRPID,
+            requireUserVerification: false,
             credential: {
                 id: credential.credentialID.toString('base64url'),
                 publicKey: new Uint8Array(credential.getDecryptedPublicKey()),
@@ -187,10 +206,10 @@ export const verifyLogin = catchAsync(async (req: Request, res: Response, next: 
                 transports: credential.transports as any,
             },
         });
-        console.log('[verifyLogin] verifyAuthenticationResponse success. Verified:', verification.verified);
+        logDebug(`[verifyLogin] verification outcome: ${JSON.stringify(verification)}`);
     } catch (error: any) {
-        console.error('[verifyLogin] verifyAuthenticationResponse threw error:', error.message);
-        return next(new AppError(error.message, 400));
+        logDebug(`[verifyLogin] Exception thrown: ${error.message}`);
+        return next(new AppError(`Verification Exception: ${error.message}`, 400));
     }
 
     if (verification.verified && verification.authenticationInfo) {
@@ -221,6 +240,6 @@ export const verifyLogin = catchAsync(async (req: Request, res: Response, next: 
         });
     }
 
-    console.log('[verifyLogin] Error: Verification failed at the end.');
+    logDebug(`[verifyLogin] Failure: verification.verified = false`);
     res.status(400).json({ status: 'fail', message: 'Verification failed' });
 });

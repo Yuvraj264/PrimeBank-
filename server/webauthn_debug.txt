@@ -1,0 +1,18 @@
+2026-03-09T18:34:01.093Z - [verifyLogin] Started. challengeId=aluay75tu, body.id=6B5NG4VHldfKZRL0zXrQTKv9qLfTR48S57Xzudawxsg
+2026-03-09T18:34:01.096Z - [verifyLogin] Found expectedChallenge: hYcL05FSyDCwZ0esRmaZnNQ3MXpsS_f-gpKJTSR5Aas
+2026-03-09T18:34:01.097Z - [verifyLogin] Parsed credentialIdBuffer from body.id. Length: 32
+2026-03-09T18:34:01.100Z - [verifyLogin] Found credential. UserID: 699298be3017d848d31f48a3
+2026-03-09T18:34:01.104Z - [verifyLogin] Calling verifyAuthenticationResponse...
+2026-03-09T18:34:01.105Z - [verifyLogin] Exception thrown: Unsupported state or unable to authenticate data
+2026-03-09T18:34:10.639Z - [verifyLogin] Started. challengeId=3s5zkrpha, body.id=6B5NG4VHldfKZRL0zXrQTKv9qLfTR48S57Xzudawxsg
+2026-03-09T18:34:10.642Z - [verifyLogin] Found expectedChallenge: hYkDlAHedS3f4hzNLLE7NS93oNg69OlQLKljKaHwyNo
+2026-03-09T18:34:10.643Z - [verifyLogin] Parsed credentialIdBuffer from body.id. Length: 32
+2026-03-09T18:34:10.646Z - [verifyLogin] Found credential. UserID: 699298be3017d848d31f48a3
+2026-03-09T18:34:10.648Z - [verifyLogin] Calling verifyAuthenticationResponse...
+2026-03-09T18:34:10.648Z - [verifyLogin] Exception thrown: Unsupported state or unable to authenticate data
+2026-03-09T18:34:30.780Z - [verifyLogin] Started. challengeId=kav41s8a1, body.id=6B5NG4VHldfKZRL0zXrQTKv9qLfTR48S57Xzudawxsg
+2026-03-09T18:34:30.785Z - [verifyLogin] Found expectedChallenge: POm6jNu1zCEWFUXXrLnMrlwAhDgCN0aLQh4umLIEuoU
+2026-03-09T18:34:30.785Z - [verifyLogin] Parsed credentialIdBuffer from body.id. Length: 32
+2026-03-09T18:34:30.787Z - [verifyLogin] Found credential. UserID: 699298be3017d848d31f48a3
+2026-03-09T18:34:30.789Z - [verifyLogin] Calling verifyAuthenticationResponse...
+2026-03-09T18:34:30.790Z - [verifyLogin] Exception thrown: Unsupported state or unable to authenticate data

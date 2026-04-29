@@ -58,7 +58,7 @@ export function decryptBuffer(encryptedText: string): Buffer {
 }
 
 /**
- * Hashes a string using SHA-256 (useful for mapping IDs securely without storing raw)
+ Hashes a string using SHA-256 (useful for mapping IDs securely without storing raw)
  */
 export function hashString(data: string | Buffer): string {
     return crypto.createHash('sha256').update(data).digest('hex');
